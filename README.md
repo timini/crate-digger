@@ -10,6 +10,7 @@ Crate Digger combines cultural recommendations from tracklists, labels and commu
 
 - [Product specification](docs/product-spec.md)
 - [Implementation plan and acceptance checklist](docs/implementation-plan.md)
+- [Epics and roadmap](docs/roadmap.md) (kanban board: [issue #23](https://github.com/timini/crate-digger/issues/23))
 
 ## Intended first release
 
