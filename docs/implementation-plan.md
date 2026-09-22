@@ -102,8 +102,8 @@ Test adversarial page instructions and malformed contribution payloads, not just
 - [x] Product overview and status in README.
 - [x] Detailed product behaviour, defaults and boundaries documented.
 - [x] Implementation milestones and acceptance checks documented.
-- [ ] Local Markdown links and Git whitespace checks pass.
-- [ ] Initial documents committed and pushed to public `timini/crate-digger`.
-- [ ] Remote visibility, branch and document availability verified.
+- [x] Local Markdown links and Git whitespace checks pass.
+- [x] Initial documents committed and pushed to public `timini/crate-digger`.
+- [x] Remote visibility, branch and document availability verified.
 
 No application implementation or code licence is included in this initial publication.
