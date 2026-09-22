@@ -15,6 +15,10 @@ This document breaks the [product specification](product-spec.md) into epics and
 
 To move a card, swap its `status:` label. Update the rank table below whenever the priority order changes.
 
+### GitHub Project board
+
+`scripts/create-project-board.sh` builds a GitHub Projects board from the same data. It adds the epics in rank order and sets the Status (Now/Next/Later/Done), Priority, Rank and Delivery milestone fields. Run it once with a `gh` login that has the project scope (`gh auth refresh -s project`). After it finishes, switch the view to the Board layout, set Column by to Status and sort by Rank; the API can't create views. If you re-prioritise, keep the script's `EPICS` table in sync with the rank table below.
+
 ## Priority tiers
 
 - **P0: Offline walking skeleton.** A DJ can import, play, rate and playlist music with no network. Every other epic builds on this, and it proves the core review UX with mocked discovery.
