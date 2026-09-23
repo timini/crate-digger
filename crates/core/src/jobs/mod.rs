@@ -26,6 +26,7 @@ pub mod kinds {
     pub const DISCOVER: &str = "discover";
     pub const SYNC: &str = "sync";
     pub const ARCHIVE: &str = "archive";
+    pub const YOUTUBE: &str = "youtube";
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

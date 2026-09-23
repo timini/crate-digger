@@ -27,16 +27,18 @@ pub fn connections_save(state: State<'_, AppState>, config: Connections) -> CmdR
     Ok(())
 }
 
-/// A changed connection may fix whatever paused live discovery, so let its
-/// jobs try again. They pause again if the problem remains.
+/// A changed connection may fix whatever paused these connectors, so let
+/// their jobs try again. They pause again if the problem remains.
 fn resume_live(conn: &rusqlite::Connection) {
-    let _ = cd_core::jobs::set_connector_status(
-        conn,
-        LIVE_SOURCE,
-        cd_core::jobs::ConnectorStatus::Ok,
-        None,
-        cd_core::util::now_ms(),
-    );
+    for connector in [LIVE_SOURCE, PAGE_SOURCE, "youtube"] {
+        let _ = cd_core::jobs::set_connector_status(
+            conn,
+            connector,
+            cd_core::jobs::ConnectorStatus::Ok,
+            None,
+            cd_core::util::now_ms(),
+        );
+    }
 }
 #[tauri::command]
 pub async fn credential_set(
@@ -134,4 +136,31 @@ pub fn discovery_paste(state: State<'_, AppState>, text: String, label: Option<S
 #[tauri::command]
 pub fn discovery_runs(state: State<'_, AppState>) -> CmdResult<Vec<cd_core::discovery::SourceRun>> {
     cd_core::discovery::recent_runs(&*state.db()?, 10).map_err(err)
+}
+
+/// Replace a track's YouTube link with the user's own, after YouTube confirms it exists.
+#[tauri::command]
+pub async fn youtube_set(state: State<'_, AppState>, track_id: String, url: String) -> CmdResult<()> {
+    let yt = crate::workers::youtube(&state);
+    let link = tauri::async_runtime::spawn_blocking(move || yt.user_link(&url).map_err(err))
+        .await
+        .map_err(err)??;
+    cd_core::youtube::correct(&*state.db()?, &track_id, &link, cd_core::util::now_ms()).map_err(err)
+}
+
+#[tauri::command]
+pub fn youtube_prefer(state: State<'_, AppState>, track_id: String, video_id: String) -> CmdResult<()> {
+    cd_core::youtube::prefer(&*state.db()?, &track_id, &video_id, cd_core::util::now_ms()).map_err(err)
+}
+
+#[tauri::command]
+pub fn youtube_reject(state: State<'_, AppState>, track_id: String, video_id: String) -> CmdResult<()> {
+    cd_core::youtube::reject(&*state.db()?, &track_id, &video_id, cd_core::util::now_ms()).map_err(err)
+}
+
+#[tauri::command]
+pub fn youtube_refresh(state: State<'_, AppState>, track_id: String) -> CmdResult<()> {
+    cd_core::youtube::queue_lookup(&*state.db()?, &track_id, true, cd_core::util::now_ms()).map_err(err)?;
+    state.notify_workers();
+    Ok(())
 }

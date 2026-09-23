@@ -81,6 +81,13 @@ pub fn plan_analysis(conn: &rusqlite::Connection, version: &FeatureVersion) -> c
     Ok(())
 }
 
+pub fn youtube(state: &AppState) -> cd_connectors::youtube::YouTube {
+    cd_connectors::youtube::YouTube {
+        secrets: state.secrets.clone(),
+        transport: Arc::new(Http::default()),
+    }
+}
+
 fn live(state: &AppState, name: &'static str) -> Arc<LiveSource> {
     Arc::new(LiveSource {
         name,
@@ -103,8 +110,13 @@ pub fn handlers(state: &AppState) -> Vec<Arc<dyn Handler>> {
         Arc::new(
             DiscoverHandler::new(Arc::new(DemoSource), DEMO_CONNECTOR)
                 .route(live(state, LIVE_SOURCE), SOULSEEK_CONNECTOR)
-                .route(live(state, PAGE_SOURCE), SOULSEEK_CONNECTOR),
+                .with_video_lookup()
+                .route(live(state, PAGE_SOURCE), SOULSEEK_CONNECTOR)
+                .with_video_lookup(),
         ),
+        Arc::new(cd_core::youtube::YoutubeHandler {
+            lookup: Arc::new(youtube(state)),
+        }),
         // Soulseek joins in #12; until then live candidates wait with a reason.
         Arc::new(AcquireHandler {
             acquirers: vec![Arc::new(DemoAcquirer::default())],

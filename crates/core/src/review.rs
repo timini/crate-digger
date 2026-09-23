@@ -114,6 +114,7 @@ pub struct ReviewCard {
     pub reasons: Vec<String>,
     pub evidence: Vec<Evidence>,
     pub youtube: Vec<YoutubeLink>,
+    pub youtube_status: Option<crate::youtube::LookupStatus>,
     pub confidence: Option<f64>,
     pub verified: bool,
     pub kept: bool,
@@ -164,8 +165,8 @@ fn card(conn: &Connection, candidate_id: &str) -> Result<Option<ReviewCard>> {
     let youtube = {
         let mut stmt = conn.prepare(
             "SELECT video_id, url, title, channel, duration_ms, confidence, preferred, user_corrected
-             FROM youtube_match WHERE track_id = ?1
-             ORDER BY user_corrected DESC, preferred DESC, confidence DESC",
+             FROM youtube_match WHERE track_id = ?1 AND rejected = 0
+             ORDER BY preferred DESC, user_corrected DESC, confidence DESC",
         )?;
         let rows = stmt
             .query_map(params![track_id], |r| {
@@ -189,6 +190,7 @@ fn card(conn: &Connection, candidate_id: &str) -> Result<Option<ReviewCard>> {
         file,
         reasons,
         evidence,
+        youtube_status: crate::youtube::status(conn, &track_id)?,
         youtube,
         confidence,
         verified,

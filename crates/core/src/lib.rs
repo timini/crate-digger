@@ -24,6 +24,7 @@ pub mod playlists;
 pub mod review;
 pub mod settings;
 pub mod util;
+pub mod youtube;
 
 pub use error::{Error, Result};
 

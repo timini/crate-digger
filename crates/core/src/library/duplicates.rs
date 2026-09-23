@@ -121,6 +121,7 @@ pub fn merge(conn: &Connection, keep: &str, remove: &str, evidence: &str) -> Res
         "field_value",
         "field_correction",
         "youtube_match",
+        "youtube_lookup",
         "track_external_id",
         "track_release",
     ] {

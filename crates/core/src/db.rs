@@ -20,6 +20,7 @@ pub const MIGRATIONS: &[(i64, &str, &str)] = &[
     (6, "analysis", include_str!("../migrations/0006_analysis.sql")),
     (7, "matching", include_str!("../migrations/0007_matching.sql")),
     (8, "discovery", include_str!("../migrations/0008_discovery.sql")),
+    (9, "youtube", include_str!("../migrations/0009_youtube.sql")),
 ];
 
 pub fn latest_version() -> i64 {

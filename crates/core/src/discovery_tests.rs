@@ -329,3 +329,29 @@ fn verified_candidates_wait_visibly_when_no_download_source_is_set_up() {
         Stage::AcquisitionQueued
     );
 }
+
+#[test]
+fn new_candidates_get_a_youtube_lookup_only_when_the_route_asks() {
+    let catalogue = vec![proposal(
+        "Page Artist",
+        "Listed",
+        "page",
+        Some("https://example.invalid/list"),
+    )];
+    let mut rig = Rig::new(catalogue.clone());
+    request_discovery(&rig.conn, "fake_source", 10, 1).unwrap();
+    rig.run();
+    assert_eq!(rig.count("SELECT COUNT(*) FROM job WHERE kind = 'youtube'"), 0);
+
+    let mut rig = Rig::new(catalogue);
+    let handler: Arc<dyn Handler> =
+        Arc::new(DiscoverHandler::new(rig.source.clone(), "fake_acquirer").with_video_lookup());
+    rig.handlers.insert(kinds::DISCOVER, handler);
+    request_discovery(&rig.conn, "fake_source", 10, 1).unwrap();
+    rig.run();
+    assert_eq!(rig.count("SELECT COUNT(*) FROM job WHERE kind = 'youtube'"), 1);
+    assert_eq!(
+        rig.count("SELECT COUNT(*) FROM youtube_lookup WHERE status = 'queued'"),
+        1
+    );
+}

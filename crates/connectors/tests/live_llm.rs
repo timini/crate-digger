@@ -145,3 +145,17 @@ fn public_page_is_read_after_robots_check() {
     println!("{} characters from {}", page.text.len(), page.url);
     assert!(page.text.contains("Underground Resistance"));
 }
+
+#[test]
+#[ignore = "needs network access"]
+fn youtube_oembed_confirms_real_videos_only() {
+    let yt = cd_connectors::youtube::YouTube {
+        secrets: Arc::new(MemoryStore::default()),
+        transport: Arc::new(Http::default()),
+    };
+    let real = yt.user_link("https://youtu.be/dQw4w9WgXcQ").unwrap();
+    println!("{:?} by {:?}", real.title, real.channel);
+    assert!(real.title.is_some());
+    // A well-formed ID that does not exist.
+    assert!(yt.user_link("https://youtu.be/zzzzzzzzzz0").is_err());
+}

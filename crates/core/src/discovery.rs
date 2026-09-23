@@ -388,6 +388,8 @@ struct DiscoverPayload {
 pub struct Route {
     pub source: Arc<dyn DiscoverySource>,
     pub acquirer_id: String,
+    /// Queue a YouTube reference lookup for each new candidate.
+    pub video_lookup: bool,
 }
 
 /// Asks a source for candidates, stores them with their evidence and
@@ -406,7 +408,16 @@ impl DiscoverHandler {
         self.routes.push(Route {
             source,
             acquirer_id: acquirer_id.to_string(),
+            video_lookup: false,
         });
+        self
+    }
+
+    /// Look up YouTube references for candidates from the last added route.
+    pub fn with_video_lookup(mut self) -> Self {
+        if let Some(r) = self.routes.last_mut() {
+            r.video_lookup = true;
+        }
         self
     }
 }
@@ -453,6 +464,15 @@ impl Handler for DiscoverHandler {
         let summary = ingest(ctx.conn, route.source.id(), &proposals, now)?;
         for id in &summary.created {
             identify(ctx.conn, id, now)?;
+            if route.video_lookup {
+                let track_id: String = ctx
+                    .conn
+                    .query_row("SELECT track_id FROM candidate WHERE id = ?1", params![id], |r| {
+                        r.get(0)
+                    })
+                    .map_err(Error::from)?;
+                crate::youtube::queue_lookup(ctx.conn, &track_id, false, now)?;
+            }
             let verified: bool = ctx
                 .conn
                 .query_row("SELECT verified FROM candidate WHERE id = ?1", params![id], |r| {

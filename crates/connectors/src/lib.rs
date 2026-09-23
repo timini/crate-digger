@@ -7,3 +7,4 @@ pub mod llm;
 pub mod probe;
 #[cfg(test)]
 pub(crate) mod testing;
+pub mod youtube;

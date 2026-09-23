@@ -153,6 +153,32 @@ pub trait Acquirer: Send + Sync {
     fn cancel(&self, transfer_id: &str) -> AdapterResult<()>;
 }
 
+/// A YouTube video that plausibly is this track, already confirmed to exist.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct VideoMatch {
+    pub video_id: String,
+    pub url: String,
+    pub title: Option<String>,
+    pub channel: Option<String>,
+    pub duration_ms: Option<i64>,
+    pub confidence: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct VideoQuery {
+    pub artist: String,
+    pub title: String,
+    pub mix: Option<String>,
+    /// Known length of the recording, from a local file.
+    pub duration_ms: Option<i64>,
+}
+
+/// Reference links (YouTube in v1). Links are references, never audio sources.
+pub trait VideoLookup: Send + Sync {
+    fn id(&self) -> &str;
+    fn lookup(&self, query: &VideoQuery) -> AdapterResult<Vec<VideoMatch>>;
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SyncAck {
     pub idempotency_key: String,

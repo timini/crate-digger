@@ -302,6 +302,12 @@ export interface Evidence {
   confidence: number
 }
 
+export interface YoutubeStatus {
+  status: 'queued' | 'found' | 'uncertain' | 'none' | 'waiting' | 'failed'
+  detail: string | null
+  updated_at: number
+}
+
 export interface YoutubeLink {
   video_id: string
   url: string
@@ -321,6 +327,7 @@ export interface ReviewCard {
   reasons: string[]
   evidence: Evidence[]
   youtube: YoutubeLink[]
+  youtube_status?: YoutubeStatus | null
   confidence: number | null
   verified: boolean
   kept: boolean
@@ -488,4 +495,8 @@ export const connections = {
   fromPage: (url: string) => invoke<void>('discovery_page', { url }),
   fromText: (text: string, label: string | null) => invoke<void>('discovery_paste', { text, label }),
   runs: () => invoke<SourceRun[]>('discovery_runs'),
+  youtubeSet: (trackId: string, url: string) => invoke<void>('youtube_set', { trackId, url }),
+  youtubePrefer: (trackId: string, videoId: string) => invoke<void>('youtube_prefer', { trackId, videoId }),
+  youtubeReject: (trackId: string, videoId: string) => invoke<void>('youtube_reject', { trackId, videoId }),
+  youtubeRefresh: (trackId: string) => invoke<void>('youtube_refresh', { trackId }),
 }

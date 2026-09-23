@@ -6,6 +6,7 @@
   import { player, playTrack, seekBy, seekTo } from '../lib/player.svelte'
   import AddToPlaylist from '../components/AddToPlaylist.svelte'
   import DiscoverFrom from '../components/DiscoverFrom.svelte'
+  import YoutubeLinks from '../components/YoutubeLinks.svelte'
   import Waveform from '../components/Waveform.svelte'
 
   let cards: ReviewCard[] = $state([])
@@ -271,12 +272,9 @@
         </div>
         <div>
           <h4>YouTube</h4>
-          {#each card.youtube as y}
-            <button class="link" onclick={() => openUrl(y.url)}>{y.title ?? y.url}</button>
-            <span class="muted small">{y.channel ?? ''} · {Math.round(y.confidence * 100)}%</span>
-          {:else}
-            <p class="muted">No YouTube reference yet.</p>
-          {/each}
+          {#key card.track_id}
+            <YoutubeLinks trackId={card.track_id} links={card.youtube} status={card.youtube_status} onchanged={load} />
+          {/key}
         </div>
       </div>
     </div>
