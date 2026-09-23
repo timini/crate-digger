@@ -3,29 +3,13 @@
 //!
 //! cargo run --release -p cd-core --example import -- <database.sqlite> <music folder>
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::time::Instant;
 
-use cd_core::library::{self, AudioProbe, ProbeInfo};
+use cd_core::library;
 
-struct Probe;
-
-impl AudioProbe for Probe {
-    fn probe(&self, path: &Path) -> Result<ProbeInfo, String> {
-        cd_audio::probe(path)
-            .map(|i| ProbeInfo {
-                codec: i.codec,
-                duration_ms: i.duration_ms.map(|d| d as i64),
-                sample_rate: Some(i.sample_rate as i64),
-                channels: Some(i.channels as i64),
-            })
-            .map_err(|e| e.to_string())
-    }
-
-    fn is_supported(&self, path: &Path) -> bool {
-        cd_audio::decode::is_supported_extension(path)
-    }
-}
+#[path = "../test_support/real_probe.rs"]
+mod real_probe;
 
 fn main() {
     let mut args = std::env::args().skip(1);
@@ -40,7 +24,7 @@ fn main() {
     let conn = cd_core::db::open(&db).expect("open database");
     let root = library::add_root(&conn, &folder).expect("add folder");
     let start = Instant::now();
-    let summary = library::import_root(&conn, &root, &Probe, |s| {
+    let summary = library::import_root(&conn, &root, &real_probe::RealProbe, |s| {
         eprint!("\r{} / {} files", s.processed, s.total);
         Ok::<(), ()>(())
     })

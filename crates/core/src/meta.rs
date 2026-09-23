@@ -18,6 +18,9 @@ fn source_priority(source: &str) -> i64 {
         "tags" => 0,
         "discogs" => 10,
         "analysis" => 20,
+        // Tags inside downloaded files come from strangers; identified
+        // source metadata is preferred.
+        "download_tags" => 200,
         _ => 100,
     }
 }

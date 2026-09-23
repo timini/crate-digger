@@ -11,6 +11,11 @@ pub const MIGRATIONS: &[(i64, &str, &str)] = &[
     (1, "init", include_str!("../migrations/0001_init.sql")),
     (2, "job_hold", include_str!("../migrations/0002_job_hold.sql")),
     (3, "library", include_str!("../migrations/0003_library.sql")),
+    (
+        4,
+        "rating_order",
+        include_str!("../migrations/0004_rating_order.sql"),
+    ),
 ];
 
 pub fn latest_version() -> i64 {

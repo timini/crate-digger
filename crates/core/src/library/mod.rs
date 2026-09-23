@@ -24,8 +24,13 @@ use crate::{meta, Error, Result};
 /// Checks that a file decodes. Implemented by the audio crate; tests use a
 /// fake. Returns a user-facing explanation on failure.
 pub trait AudioProbe: Send + Sync {
+    /// Open the file and decode its first packets.
     fn probe(&self, path: &Path) -> std::result::Result<ProbeInfo, String>;
     fn is_supported(&self, path: &Path) -> bool;
+    /// Decode the whole file; returns the decoded length in milliseconds.
+    fn decode_full(&self, path: &Path) -> std::result::Result<i64, String>;
+    /// Peak overview scaled to 0..=255.
+    fn waveform(&self, path: &Path, bins: usize) -> std::result::Result<Vec<u8>, String>;
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -374,6 +379,71 @@ pub fn register_file(
         file_id,
         track_id,
         outcome,
+        availability: availability_of(&facts).0,
+    })
+}
+
+/// Register a downloaded file in staging as a copy of `track_id`. The
+/// file's own tags are stored at low priority: the candidate's identified
+/// metadata stays in charge. Safe to call again for the same path.
+pub fn register_staged(
+    conn: &Connection,
+    path: &Path,
+    track_id: &str,
+    probe: &dyn AudioProbe,
+) -> Result<Registered> {
+    let p = path_to_db(path);
+    if let Some((file_id, existing_track, availability)) = conn
+        .query_row(
+            "SELECT id, track_id, availability FROM audio_file WHERE path = ?1",
+            params![p],
+            |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get(2)?)),
+        )
+        .optional()?
+    {
+        if existing_track != track_id {
+            return Err(Error::Conflict(format!(
+                "{p} is already registered to another track"
+            )));
+        }
+        return Ok(Registered {
+            file_id,
+            track_id: existing_track,
+            outcome: RegisterOutcome::Unchanged,
+            availability,
+        });
+    }
+    let facts = gather(path, probe)?;
+    let has_primary: bool = conn.query_row(
+        "SELECT EXISTS (SELECT 1 FROM audio_file WHERE track_id = ?1 AND is_primary = 1)",
+        params![track_id],
+        |r| r.get(0),
+    )?;
+    let file_id = new_id();
+    let now = now_ms();
+    conn.execute(
+        "INSERT INTO audio_file (id, track_id, path, origin, size_bytes, mtime_ms, content_hash, is_primary,
+                                 last_checked_at, created_at)
+         VALUES (?1, ?2, ?3, 'staged', ?4, ?5, ?6, ?7, ?8, ?8)",
+        params![
+            file_id,
+            track_id,
+            p,
+            facts.size,
+            facts.mtime,
+            facts.hash,
+            !has_primary,
+            now
+        ],
+    )?;
+    write_file_facts(conn, &file_id, &p, &facts)?;
+    if let Some(t) = &facts.tags {
+        meta::set_extracted(conn, track_id, "download_tags", &t.fields())?;
+    }
+    Ok(Registered {
+        file_id,
+        track_id: track_id.to_string(),
+        outcome: RegisterOutcome::Added,
         availability: availability_of(&facts).0,
     })
 }

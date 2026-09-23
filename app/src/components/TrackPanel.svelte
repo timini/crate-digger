@@ -2,7 +2,7 @@
   import { open } from '@tauri-apps/plugin-dialog'
   import { revealItemInDir } from '@tauri-apps/plugin-opener'
   import { api, type Field, type RelinkProposal, type TrackDetail } from '../lib/api'
-  import { formatBytes, formatDuration, formatRating } from '../lib/format'
+  import { formatBytes, formatCodec, formatDuration, formatRating } from '../lib/format'
   import AddToPlaylist from './AddToPlaylist.svelte'
 
   let { trackId, onclose, onchange }: { trackId: string; onclose: () => void; onchange: () => void } = $props()
@@ -134,7 +134,7 @@
       <div class="file" class:bad={file.availability !== 'available'}>
         <div class="path" title={file.path}>{file.path}</div>
         <div class="muted small">
-          {file.format ?? 'unknown'} · {formatDuration(file.duration_ms)} · {formatBytes(file.size_bytes)}
+          {formatCodec(file.format)} · {formatDuration(file.duration_ms)} · {formatBytes(file.size_bytes)}
           {#if file.bitrate_kbps} · {file.bitrate_kbps} kbps{/if}
           {#if file.is_primary} · primary{/if}
         </div>

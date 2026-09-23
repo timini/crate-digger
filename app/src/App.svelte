@@ -5,6 +5,7 @@
   import Library from './views/Library.svelte'
   import PlayerBar from './components/PlayerBar.svelte'
   import Playlists from './views/Playlists.svelte'
+  import Review from './views/Review.svelte'
 
   type View = 'review' | 'library' | 'playlists' | 'activity' | 'settings'
   const views: { id: View; label: string }[] = [
@@ -15,7 +16,7 @@
     { id: 'settings', label: 'Settings' },
   ]
 
-  let current: View = $state('library')
+  let current: View = $state('review')
   let info: AppInfo | null = $state(null)
   let error: string | null = $state(null)
 
@@ -43,7 +44,9 @@
     {#if error}
       <p class="error">{error}</p>
     {/if}
-    {#if current === 'activity'}
+    {#if current === 'review'}
+      <Review />
+    {:else if current === 'activity'}
       <Activity />
     {:else if current === 'library'}
       <Library />

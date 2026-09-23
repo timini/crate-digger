@@ -4,6 +4,7 @@ pub mod jobs;
 pub mod library;
 pub mod player;
 pub mod playlists;
+pub mod review;
 
 use serde::Serialize;
 use tauri::State;

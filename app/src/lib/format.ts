@@ -43,3 +43,21 @@ export function trackLabel(t: { artist: string | null; title: string | null; mix
   const withMix = t.mix ? `${title} (${t.mix})` : title
   return t.artist ? `${t.artist} - ${withMix}` : withMix
 }
+
+const CODECS: Record<string, string> = {
+  pcm_s16le: 'WAV',
+  pcm_s24le: 'WAV 24-bit',
+  pcm_s16be: 'AIFF',
+  pcm_s24be: 'AIFF 24-bit',
+  flac: 'FLAC',
+  mp3: 'MP3',
+  aac: 'AAC',
+  alac: 'ALAC',
+  vorbis: 'Ogg Vorbis',
+}
+
+/** Readable name for a decoder codec identifier. */
+export function formatCodec(codec: string | null | undefined): string {
+  if (!codec) return 'Unknown format'
+  return CODECS[codec] ?? codec.toUpperCase()
+}

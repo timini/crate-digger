@@ -15,6 +15,8 @@ pub struct AppState {
     player: Mutex<Option<Arc<Player>>>,
     /// Track the player has loaded, for the UI.
     pub now_playing: Mutex<Option<String>>,
+    /// Identifies this run of the app. Skips last for one session.
+    pub session_id: String,
 }
 
 impl AppState {
@@ -37,6 +39,7 @@ impl AppState {
             pool: Mutex::new(None),
             player: Mutex::new(None),
             now_playing: Mutex::new(None),
+            session_id: cd_core::util::new_id(),
         })
     }
 
@@ -48,6 +51,16 @@ impl AppState {
             return Ok(p.clone());
         }
         let p = Arc::new(Player::start(OutputConfig::Device)?);
+        let volume = self
+            .db()
+            .ok()
+            .and_then(|c| {
+                cd_core::settings::get::<f32>(&c, cd_core::settings::keys::VOLUME)
+                    .ok()
+                    .flatten()
+            })
+            .unwrap_or(1.0);
+        p.set_volume(volume);
         *slot = Some(p.clone());
         Ok(p)
     }
@@ -58,6 +71,29 @@ impl AppState {
 
     pub fn db(&self) -> Result<MutexGuard<'_, Connection>, String> {
         self.db.lock().map_err(|_| "database lock poisoned".to_string())
+    }
+
+    /// Where downloads wait until they are kept or cleared.
+    pub fn staging_dir(&self) -> PathBuf {
+        self.db()
+            .ok()
+            .and_then(|c| {
+                cd_core::settings::get::<String>(&c, cd_core::settings::keys::STAGING_DIR)
+                    .ok()
+                    .flatten()
+            })
+            .map(PathBuf::from)
+            .unwrap_or_else(|| self.data_dir.join("staging"))
+    }
+
+    /// Run a closure on a fresh connection in the background, for work that
+    /// must not delay the command that triggered it (reranking).
+    pub fn spawn_background(&self, name: &'static str, f: impl FnOnce(&Connection) + Send + 'static) {
+        let path = self.db_path.clone();
+        std::thread::spawn(move || match cd_core::db::open_existing(&path) {
+            Ok(conn) => f(&conn),
+            Err(e) => tracing::error!("{name}: could not open database: {e}"),
+        });
     }
 
     pub fn start_workers(&self, handlers: Vec<Arc<dyn Handler>>) -> Result<(), String> {

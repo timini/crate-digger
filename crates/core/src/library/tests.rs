@@ -8,25 +8,7 @@ use super::search::{search, LibraryQuery, RatingFilter};
 use super::*;
 use crate::domain::Field;
 
-/// Real decoding via the audio crate, as in the app.
-struct RealProbe;
-
-impl AudioProbe for RealProbe {
-    fn probe(&self, path: &Path) -> std::result::Result<ProbeInfo, String> {
-        cd_audio::probe(path)
-            .map(|i| ProbeInfo {
-                codec: i.codec,
-                duration_ms: i.duration_ms.map(|d| d as i64),
-                sample_rate: Some(i.sample_rate as i64),
-                channels: Some(i.channels as i64),
-            })
-            .map_err(|e| e.to_string())
-    }
-
-    fn is_supported(&self, path: &Path) -> bool {
-        cd_audio::decode::is_supported_extension(path)
-    }
-}
+use crate::real_probe::RealProbe;
 
 fn fixtures() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../audio/tests/fixtures")

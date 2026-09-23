@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatBytes, formatDuration, formatRelative, trackLabel } from './format'
+import { formatBytes, formatCodec, formatDuration, formatRelative, trackLabel } from './format'
 
 describe('formatDuration', () => {
   it('formats minutes and seconds', () => {
@@ -34,5 +34,14 @@ describe('trackLabel', () => {
   it('includes artist and mix when present', () => {
     expect(trackLabel({ artist: 'A', title: 'B', mix: 'Dub' })).toBe('A - B (Dub)')
     expect(trackLabel({ artist: null, title: null, mix: null })).toBe('Untitled')
+  })
+})
+
+describe('formatCodec', () => {
+  it('names common codecs', () => {
+    expect(formatCodec('pcm_s16le')).toBe('WAV')
+    expect(formatCodec('flac')).toBe('FLAC')
+    expect(formatCodec('opus')).toBe('OPUS')
+    expect(formatCodec(null)).toBe('Unknown format')
   })
 })

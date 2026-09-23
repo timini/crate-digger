@@ -1,12 +1,13 @@
-//! Connects the core's decodability check to the audio crate.
+// Real decoding via the audio crate, shared by core tests and examples.
+// The app has its own copy in app/src-tauri/src/probe.rs.
 
 use std::path::Path;
 
 use cd_core::library::{AudioProbe, ProbeInfo};
 
-pub struct SymphoniaProbe;
+pub struct RealProbe;
 
-impl AudioProbe for SymphoniaProbe {
+impl AudioProbe for RealProbe {
     fn probe(&self, path: &Path) -> Result<ProbeInfo, String> {
         cd_audio::probe(path)
             .map(|i| ProbeInfo {

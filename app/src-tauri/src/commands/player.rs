@@ -82,8 +82,9 @@ pub fn player_seek(state: State<'_, AppState>, ms: u64) -> CmdResult<()> {
 
 #[tauri::command]
 pub fn player_set_volume(state: State<'_, AppState>, volume: f32) -> CmdResult<()> {
+    let volume = volume.clamp(0.0, 1.0);
     state.player()?.set_volume(volume);
-    Ok(())
+    cd_core::settings::set(&*state.db()?, cd_core::settings::keys::VOLUME, &volume).map_err(err)
 }
 
 #[tauri::command]

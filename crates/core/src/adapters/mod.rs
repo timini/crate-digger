@@ -5,6 +5,7 @@
 //! adapter reports failures as [`AdapterError`] so the job system can tell
 //! authentication problems, outages and bad input apart.
 
+pub mod demo;
 pub mod fake;
 
 use std::path::PathBuf;

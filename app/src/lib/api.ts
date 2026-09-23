@@ -242,6 +242,55 @@ export interface PlaylistEntry {
   rating: RatingKind | null
 }
 
+export interface Evidence {
+  source_kind: string
+  source_url: string | null
+  supplied_text_id: string | null
+  retrieved_at: number
+  excerpt: string
+  confidence: number
+}
+
+export interface YoutubeLink {
+  video_id: string
+  url: string
+  title: string | null
+  channel: string | null
+  duration_ms: number | null
+  confidence: number
+  preferred: boolean
+  user_corrected: boolean
+}
+
+export interface ReviewCard {
+  candidate_id: string
+  track_id: string
+  meta: TrackMeta
+  file: FileRecord
+  reasons: string[]
+  evidence: Evidence[]
+  youtube: YoutubeLink[]
+  confidence: number | null
+  verified: boolean
+  kept: boolean
+  playlists: [string, string][]
+}
+
+export interface QueueStats {
+  ready: number
+  in_progress: number
+  skipped: number
+  needs_review: number
+  failed: number
+  reviewed: number
+}
+
+export interface Undone {
+  track_id: string
+  kind: RatingKind | 'skip'
+  effective: RatingKind | null
+}
+
 export const api = {
   appInfo: () => invoke<AppInfo>('app_info'),
   activity: (states: JobState[], limit = 200) => invoke<Activity>('activity', { states, limit }),
@@ -282,4 +331,14 @@ export const api = {
   addToPlaylist: (id: string, trackIds: string[], at?: number) => invoke<void>('playlist_add', { id, trackIds, at }),
   removeFromPlaylist: (id: string, position: number) => invoke<void>('playlist_remove', { id, position }),
   movePlaylistEntry: (id: string, from: number, to: number) => invoke<void>('playlist_move', { id, from, to }),
+
+  reviewNext: (limit = 5) => invoke<ReviewCard[]>('review_next', { limit }),
+  reviewStats: () => invoke<QueueStats>('review_stats'),
+  rate: (trackId: string, kind: RatingKind) => invoke<string>('review_rate', { trackId, kind }),
+  skip: (trackId: string) => invoke<string>('review_skip', { trackId }),
+  undo: () => invoke<Undone | null>('review_undo'),
+  keep: (trackId: string, keep: boolean) => invoke<void>('review_keep', { trackId, keep }),
+  findMore: () => invoke<void>('review_find_more'),
+  demoDiscovery: () => invoke<boolean>('demo_discovery_get'),
+  setDemoDiscovery: (enabled: boolean) => invoke<void>('demo_discovery_set', { enabled }),
 }

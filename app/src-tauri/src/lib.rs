@@ -1,6 +1,7 @@
 mod commands;
 mod probe;
 mod state;
+mod workers;
 
 use tauri::Manager;
 
@@ -21,9 +22,8 @@ pub fn run() {
                 None => app.path().app_data_dir()?,
             };
             let state = state::AppState::open(&data_dir)?;
-            state.start_workers(vec![std::sync::Arc::new(cd_core::library::ImportHandler {
-                probe: std::sync::Arc::new(probe::SymphoniaProbe),
-            })])?;
+            let handlers = workers::handlers(&state);
+            state.start_workers(handlers)?;
             app.manage(state);
 
             // CRATE_DIGGER_SMOKE=1: prove the app starts, then exit cleanly.
@@ -73,6 +73,15 @@ pub fn run() {
             commands::playlists::playlist_add,
             commands::playlists::playlist_remove,
             commands::playlists::playlist_move,
+            commands::review::review_next,
+            commands::review::review_stats,
+            commands::review::review_rate,
+            commands::review::review_skip,
+            commands::review::review_undo,
+            commands::review::review_keep,
+            commands::review::review_find_more,
+            commands::review::demo_discovery_get,
+            commands::review::demo_discovery_set,
         ])
         .build(tauri::generate_context!())
         .expect("error while building Crate Digger")
