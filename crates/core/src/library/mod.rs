@@ -786,10 +786,12 @@ pub struct FileRecord {
     pub availability: Availability,
     pub availability_reason: Option<String>,
     pub is_primary: bool,
+    /// How this copy differs from the recording, for example "pitched:+4.0".
+    pub variant: Option<String>,
 }
 
 const FILE_COLUMNS: &str = "id, track_id, path, origin, size_bytes, duration_ms, format, sample_rate,
-    channels, bitrate_kbps, availability, availability_reason, is_primary";
+    channels, bitrate_kbps, availability, availability_reason, is_primary, variant";
 
 fn file_from_row(r: &rusqlite::Row<'_>) -> rusqlite::Result<FileRecord> {
     Ok(FileRecord {
@@ -806,6 +808,7 @@ fn file_from_row(r: &rusqlite::Row<'_>) -> rusqlite::Result<FileRecord> {
         availability: r.get(10)?,
         availability_reason: r.get(11)?,
         is_primary: r.get(12)?,
+        variant: r.get(13)?,
     })
 }
 
@@ -865,8 +868,12 @@ struct ImportPayload {
     root_id: String,
 }
 
+/// A step to run after a successful scan, for example queueing analysis.
+pub type AfterImport = Arc<dyn Fn(&Connection) -> Result<()> + Send + Sync>;
+
 pub struct ImportHandler {
     pub probe: Arc<dyn AudioProbe>,
+    pub after: Option<AfterImport>,
 }
 
 impl Handler for ImportHandler {
@@ -887,6 +894,11 @@ impl Handler for ImportHandler {
         match result {
             Ok(summary) => {
                 tracing::info!(?summary, "import finished");
+                if let Some(after) = &self.after {
+                    if let Err(e) = after(conn) {
+                        tracing::warn!("after-import step failed: {e}");
+                    }
+                }
                 ctx.save_checkpoint(&summary)
             }
             Err(ImportError::Stopped(e)) => Err(e),

@@ -1,5 +1,7 @@
 //! Tauri commands. Each returns a plain string error the UI can show.
 
+pub mod analysis;
+pub mod identity;
 pub mod jobs;
 pub mod library;
 pub mod player;

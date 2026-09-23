@@ -61,3 +61,11 @@ export function formatCodec(codec: string | null | undefined): string {
   if (!codec) return 'Unknown format'
   return CODECS[codec] ?? codec.toUpperCase()
 }
+
+/** "pitched:+4.0" as "Pitched +4.0%". */
+export function formatVariant(variant: string | null | undefined): string {
+  if (!variant) return ''
+  const [kind, value] = variant.split(':')
+  if (kind === 'pitched') return `Pitched ${value}%`
+  return kind
+}

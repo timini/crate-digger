@@ -11,6 +11,7 @@ name = "cd_audio"
 cpal = "0.18.2"
 rtrb = "0.4.0"
 rubato = "5.0.0"
+rusty-chromaprint = "0.3.0"
 serde = { version = "1.0.229", features = ["derive"] }
 symphonia = { version = "0.6.1", default-features = false, features = ["aac", "alac", "flac", "mp3", "pcm", "vorbis", "wav", "aiff", "isomp4", "ogg"] }
 thiserror = "2.0.20"

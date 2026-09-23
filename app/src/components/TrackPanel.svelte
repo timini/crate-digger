@@ -2,7 +2,8 @@
   import { open } from '@tauri-apps/plugin-dialog'
   import { revealItemInDir } from '@tauri-apps/plugin-opener'
   import { api, type Field, type RelinkProposal, type TrackDetail } from '../lib/api'
-  import { formatBytes, formatCodec, formatDuration, formatRating } from '../lib/format'
+  import { formatBytes, formatCodec, formatDuration, formatRating, formatVariant, trackLabel } from '../lib/format'
+  import { playTrack } from '../lib/player.svelte'
   import AddToPlaylist from './AddToPlaylist.svelte'
 
   let { trackId, onclose, onchange }: { trackId: string; onclose: () => void; onchange: () => void } = $props()
@@ -129,6 +130,30 @@
     </form>
     <p class="muted small">Edits are stored separately and are never overwritten by a rescan. Files are not modified.</p>
 
+    <h4>Analysis</h4>
+    {#if detail.analysis.state?.state === 'done'}
+      <p class="small">
+        {#if detail.analysis.tempo}{detail.analysis.tempo} BPM{/if}
+        {#if detail.analysis.key} · {detail.analysis.key.name} ({detail.analysis.key.camelot}){/if}
+        {#if detail.analysis.loudness_lufs != null} · {detail.analysis.loudness_lufs.toFixed(1)} LUFS{/if}
+      </p>
+      <p class="muted small">Estimated by {detail.analysis.model}. Tags and your edits take precedence in the fields above.</p>
+    {:else if detail.analysis.state}
+      <p class="small">{detail.analysis.state.state === 'queued' ? 'Waiting to be analysed.' : detail.analysis.state.reason}</p>
+    {:else}
+      <p class="muted small">Not analysed yet.</p>
+    {/if}
+
+    {#if detail.versions.length}
+      <h4>Other versions</h4>
+      {#each detail.versions as v (v.track_id)}
+        <div class="version">
+          <span>{trackLabel(v.meta)}</span>
+          {#if v.has_audio}<button onclick={() => playTrack(v.track_id, trackLabel(v.meta))}>Play</button>{/if}
+        </div>
+      {/each}
+    {/if}
+
     <h4>Files</h4>
     {#each detail.files as file (file.id)}
       <div class="file" class:bad={file.availability !== 'available'}>
@@ -137,6 +162,7 @@
           {formatCodec(file.format)} · {formatDuration(file.duration_ms)} · {formatBytes(file.size_bytes)}
           {#if file.bitrate_kbps} · {file.bitrate_kbps} kbps{/if}
           {#if file.is_primary} · primary{/if}
+          {#if file.variant} · {formatVariant(file.variant)}{/if}
         </div>
         {#if file.availability_reason}<div class="reason">{file.availability_reason}</div>{/if}
         <div class="actions">
@@ -200,6 +226,13 @@
   }
   .small {
     font-size: 12px;
+  }
+  .version {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
   }
   .file {
     padding: 8px;

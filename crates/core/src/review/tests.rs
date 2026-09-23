@@ -7,12 +7,14 @@ use std::time::Duration;
 use rusqlite::{params, Connection};
 
 use super::*;
-use crate::acquisition::{AcquireHandler, AnalyseHandler, ValidateHandler};
+use crate::acquisition::{AcquireHandler, ValidateHandler};
 use crate::adapters::demo::DemoAcquirer;
 use crate::adapters::fake::{FakeAcquirer, FakeSource};
 use crate::adapters::{CandidateProposal, EvidenceProposal};
+use crate::analysis::handler::AnalysisHandler;
 use crate::discovery::{self, DiscoverHandler};
 use crate::domain::{CandidateStatus, JobState};
+use crate::fake_analyzer::FakeAnalyzer;
 use crate::jobs::kinds;
 use crate::jobs::scheduler::{staged_bytes, Limits, Scheduler};
 use crate::jobs::worker::{run_one, Handler};
@@ -294,8 +296,11 @@ impl Rig {
                 probe: probe.clone(),
                 poll: Duration::from_millis(10),
             }),
-            Arc::new(ValidateHandler { probe: probe.clone() }),
-            Arc::new(AnalyseHandler { probe }),
+            Arc::new(ValidateHandler { probe }),
+            Arc::new(AnalysisHandler {
+                analyzer: Arc::new(FakeAnalyzer::default()),
+                after: None,
+            }),
         ];
         Rig {
             conn,

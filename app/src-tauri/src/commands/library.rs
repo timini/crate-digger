@@ -59,6 +59,8 @@ pub struct TrackDetail {
     rating: Option<String>,
     kept: bool,
     playlists: Vec<(String, String)>,
+    versions: Vec<cd_core::identity::Version>,
+    analysis: cd_core::analysis::store::AnalysisSummary,
 }
 
 #[tauri::command]
@@ -81,6 +83,11 @@ pub fn track_detail(state: State<'_, AppState>, track_id: String) -> CmdResult<T
         .is_ok();
     let playlists = cd_core::playlists::containing(&conn, &track_id).map_err(err)?;
     Ok(TrackDetail {
+        versions: cd_core::identity::versions(&conn, &track_id).map_err(err)?,
+        analysis: {
+            use cd_core::analysis::handler::Analyzer;
+            cd_core::analysis::store::summary(&conn, &track_id, &state.analyzer.version()).map_err(err)?
+        },
         meta: meta::effective(&conn, &track_id).map_err(err)?,
         provenance: meta::provenance(&conn, &track_id).map_err(err)?,
         files: library::files_for_track(&conn, &track_id).map_err(err)?,

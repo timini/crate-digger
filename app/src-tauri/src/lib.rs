@@ -1,4 +1,5 @@
 mod commands;
+mod models;
 mod probe;
 mod state;
 mod tray;
@@ -30,6 +31,12 @@ pub fn run() {
             let state = state::AppState::open(&data_dir, default_archive)?;
             state.recover_archive();
             state.apply_limits();
+            if let Ok(conn) = state.db() {
+                use cd_core::analysis::handler::Analyzer;
+                if let Err(e) = workers::plan_analysis(&conn, &state.analyzer.version()) {
+                    tracing::warn!("could not plan analysis: {e}");
+                }
+            }
             let handlers = workers::handlers(&state);
             state.start_workers(handlers)?;
             app.manage(state);
@@ -97,6 +104,13 @@ pub fn run() {
             commands::settings::settings_set_limits,
             commands::settings::settings_set_close_to_tray,
             commands::settings::onboarding_complete,
+            commands::identity::identity_conflicts,
+            commands::identity::identity_conflict_count,
+            commands::identity::identity_resolve,
+            commands::analysis::models_list,
+            commands::analysis::model_download,
+            commands::analysis::model_download_progress,
+            commands::analysis::model_choose,
             commands::review::demo_discovery_get,
             commands::review::demo_discovery_set,
         ])

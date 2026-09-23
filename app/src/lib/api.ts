@@ -160,6 +160,29 @@ export interface FileRecord {
   availability: Availability
   availability_reason: string | null
   is_primary: boolean
+  variant: string | null
+}
+
+export interface Version {
+  track_id: string
+  meta: TrackMeta
+  has_audio: boolean
+}
+
+export interface KeyEstimate {
+  name: string
+  camelot: string
+  confidence: number
+}
+
+export interface AnalysisSummary {
+  model: string
+  state: { state: 'queued' | 'done' | 'needs_audio' | 'failed'; reason: string | null } | null
+  tempo: number | null
+  tempo_confidence: number | null
+  key: KeyEstimate | null
+  loudness_lufs: number | null
+  quality: { decoded_fraction: number | null; clipping_ratio: number; silence_ratio: number; decode_errors: number } | null
 }
 
 export interface TrackDetail {
@@ -170,6 +193,34 @@ export interface TrackDetail {
   rating: RatingKind | null
   kept: boolean
   playlists: [string, string][]
+  versions: Version[]
+  analysis: AnalysisSummary
+}
+
+export type Relation = 'same_recording' | 'different_version' | 'unrelated'
+
+export interface ConflictSide {
+  track_id: string
+  meta: TrackMeta
+  path: string | null
+  duration_ms: number | null
+}
+
+export type IdentityEvidence =
+  | { kind: 'fingerprint_match'; score: number; coverage: number; speed: number }
+  | { kind: 'fingerprint_mismatch'; score: number }
+  | { kind: 'identical_bytes' }
+  | { kind: 'embedding_similarity'; similarity: number; model: string }
+  | { kind: 'llm_assertion'; claim: string }
+  | { kind: 'user_decision'; relation: Relation }
+
+export interface Conflict {
+  id: string
+  a: ConflictSide
+  b: ConflictSide
+  reason: string
+  evidence: IdentityEvidence[]
+  created_at: number
 }
 
 export interface ImportSummary {
@@ -326,6 +377,16 @@ export interface AppSettings {
   data_dir: string
 }
 
+export interface ModelStatus {
+  id: string
+  licence: string
+  size_bytes: number
+  dims: number
+  installed: boolean
+  chosen: boolean
+  recommended: boolean
+}
+
 export const api = {
   appInfo: () => invoke<AppInfo>('app_info'),
   activity: (states: JobState[], limit = 200) => invoke<Activity>('activity', { states, limit }),
@@ -385,4 +446,14 @@ export const api = {
   setLimits: (limits: UserLimits) => invoke<void>('settings_set_limits', { limits }),
   setCloseToTray: (enabled: boolean) => invoke<void>('settings_set_close_to_tray', { enabled }),
   completeOnboarding: () => invoke<void>('onboarding_complete'),
+
+  conflicts: () => invoke<Conflict[]>('identity_conflicts'),
+  conflictCount: () => invoke<number>('identity_conflict_count'),
+  resolveConflict: (conflictId: string, relation: Relation) =>
+    invoke<unknown>('identity_resolve', { conflictId, relation }),
+
+  models: () => invoke<ModelStatus[]>('models_list'),
+  downloadModel: (id: string) => invoke<void>('model_download', { id }),
+  downloadProgress: () => invoke<{ id: string; bytes: number } | null>('model_download_progress'),
+  chooseModel: (id: string | null) => invoke<void>('model_choose', { id }),
 }

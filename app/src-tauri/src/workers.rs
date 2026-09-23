@@ -3,8 +3,12 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use cd_core::acquisition::{AcquireHandler, AnalyseHandler, ValidateHandler};
+use cd_core::acquisition::{AcquireHandler, ValidateHandler};
 use cd_core::adapters::demo::{DemoAcquirer, DemoSource};
+use cd_core::analysis::handler::{AnalysisHandler, Analyzer, ProcessAnalyzer};
+use cd_core::analysis::protocol::ModelRef;
+use cd_core::analysis::runner::RunnerConfig;
+use cd_core::analysis::FeatureVersion;
 use cd_core::archive::ArchiveHandler;
 use cd_core::discovery::DiscoverHandler;
 use cd_core::jobs::worker::Handler;
@@ -16,10 +20,45 @@ use crate::state::AppState;
 /// Connector name for the only acquisition source in milestone 1.
 pub const DEMO_CONNECTOR: &str = "demo";
 
+/// Analysis runs in a copy of this executable started with the worker flag,
+/// so a crash in decoding or analysis cannot take the app down. The chosen
+/// pretrained model, if installed, runs alongside the built-in baseline and
+/// its embeddings drive ranking.
+pub fn analyzer(model: Option<ModelRef>) -> ProcessAnalyzer {
+    let exe = std::env::current_exe().unwrap_or_else(|_| "crate-digger".into());
+    let mut config = RunnerConfig::new(exe);
+    config.args = vec![cd_analyzer::WORKER_FLAG.to_string()];
+    let version = model
+        .as_ref()
+        .and_then(|m| cd_analyzer::models::info(&m.id))
+        .map(cd_analyzer::models::version)
+        .unwrap_or_else(cd_analyzer::embed::version);
+    ProcessAnalyzer {
+        config,
+        version,
+        models: model.into_iter().collect(),
+    }
+}
+
+/// Queue analysis for tracks that lack the current version.
+pub fn plan_analysis(conn: &rusqlite::Connection, version: &FeatureVersion) -> cd_core::Result<()> {
+    let p = cd_core::analysis::store::plan(conn, version, cd_core::util::now_ms())?;
+    if p.queued > 0 || p.needs_audio > 0 {
+        tracing::info!(queued = p.queued, needs_audio = p.needs_audio, "planned analysis");
+    }
+    Ok(())
+}
+
 pub fn handlers(state: &AppState) -> Vec<Arc<dyn Handler>> {
     let probe: Arc<dyn AudioProbe> = Arc::new(SymphoniaProbe);
     vec![
-        Arc::new(ImportHandler { probe: probe.clone() }),
+        Arc::new(ImportHandler {
+            probe: probe.clone(),
+            after: Some({
+                let analyzer = state.analyzer.clone();
+                Arc::new(move |conn| plan_analysis(conn, &analyzer.version()))
+            }),
+        }),
         Arc::new(DiscoverHandler {
             source: Arc::new(DemoSource),
             acquirer_id: DEMO_CONNECTOR.into(),
@@ -30,8 +69,25 @@ pub fn handlers(state: &AppState) -> Vec<Arc<dyn Handler>> {
             probe: probe.clone(),
             poll: Duration::from_millis(500),
         }),
-        Arc::new(ValidateHandler { probe: probe.clone() }),
-        Arc::new(AnalyseHandler { probe }),
+        Arc::new(ValidateHandler { probe }),
+        {
+            let analyzer = state.analyzer.clone();
+            let for_matching = analyzer.clone();
+            Arc::new(AnalysisHandler {
+                analyzer,
+                // Match each analysed file against the library.
+                after: Some(Arc::new(move |conn, track, file| {
+                    cd_core::identity::matching::match_track(
+                        conn,
+                        for_matching.as_ref(),
+                        track,
+                        file,
+                        &Default::default(),
+                    )
+                    .map(|_| ())
+                })),
+            })
+        },
         Arc::new(ArchiveHandler {
             root: {
                 let default = state.default_archive_dir.clone();

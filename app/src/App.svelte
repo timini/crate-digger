@@ -7,14 +7,16 @@
   import Playlists from './views/Playlists.svelte'
   import Review from './views/Review.svelte'
   import Settings from './views/Settings.svelte'
+  import Identity from './views/Identity.svelte'
   import Onboarding from './components/Onboarding.svelte'
   import type { AppSettings } from './lib/api'
 
-  type View = 'review' | 'library' | 'playlists' | 'activity' | 'settings'
+  type View = 'review' | 'library' | 'playlists' | 'identity' | 'activity' | 'settings'
   const views: { id: View; label: string }[] = [
     { id: 'review', label: 'Review' },
     { id: 'library', label: 'Library' },
     { id: 'playlists', label: 'Playlists' },
+    { id: 'identity', label: 'Identity' },
     { id: 'activity', label: 'Activity' },
     { id: 'settings', label: 'Settings' },
   ]
@@ -23,12 +25,23 @@
   let info: AppInfo | null = $state(null)
   let error: string | null = $state(null)
   let firstRun: AppSettings | null = $state(null)
+  let conflicts = $state(0)
+
+  async function refreshConflicts() {
+    try {
+      conflicts = await api.conflictCount()
+    } catch {
+      // Not critical; the badge simply stays as it was.
+    }
+  }
 
   onMount(async () => {
     try {
       info = await api.appInfo()
       const s = await api.settings()
       if (!s.onboarded) firstRun = s
+      refreshConflicts()
+      setInterval(refreshConflicts, 10_000)
     } catch (e) {
       error = String(e)
     }
@@ -40,7 +53,10 @@
   <nav>
     <h1>Crate Digger</h1>
     {#each views as v}
-      <button class:active={current === v.id} onclick={() => (current = v.id)}>{v.label}</button>
+      <button class:active={current === v.id} onclick={() => (current = v.id)}>
+        {v.label}
+        {#if v.id === 'identity' && conflicts > 0}<span class="badge">{conflicts}</span>{/if}
+      </button>
     {/each}
     <footer>
       {#if info}v{info.version} · schema {info.schema_version}{/if}
@@ -58,6 +74,8 @@
       <Library />
     {:else if current === 'playlists'}
       <Playlists />
+    {:else if current === 'identity'}
+      <Identity onchange={refreshConflicts} />
     {:else if current === 'settings'}
       <Settings />
     {:else}

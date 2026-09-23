@@ -9,11 +9,13 @@ extern crate self as cd_core;
 
 pub mod acquisition;
 pub mod adapters;
+pub mod analysis;
 pub mod archive;
 pub mod db;
 pub mod discovery;
 pub mod domain;
 pub mod error;
+pub mod identity;
 pub mod jobs;
 pub mod library;
 pub mod meta;
@@ -28,3 +30,7 @@ pub use error::{Error, Result};
 #[cfg(test)]
 #[path = "../test_support/real_probe.rs"]
 pub(crate) mod real_probe;
+
+#[cfg(test)]
+#[path = "../test_support/fake_analyzer.rs"]
+pub(crate) mod fake_analyzer;

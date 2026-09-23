@@ -23,3 +23,5 @@ tauri-plugin-dialog = "2"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 rusqlite = { version = "0.40", features = ["bundled"] }
+cd-analyzer = { version = "0.1.0", path = "../../crates/analyzer" }
+ureq = "3.4.2"
