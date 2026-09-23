@@ -17,10 +17,19 @@ pub struct AppState {
     pub now_playing: Mutex<Option<String>>,
     /// Identifies this run of the app. Skips last for one session.
     pub session_id: String,
+    /// Used when no archive folder has been chosen.
+    pub default_archive_dir: PathBuf,
+}
+
+pub fn archive_dir_setting(conn: &Connection) -> Option<PathBuf> {
+    cd_core::settings::get::<String>(conn, cd_core::settings::keys::ARCHIVE_DIR)
+        .ok()
+        .flatten()
+        .map(PathBuf::from)
 }
 
 impl AppState {
-    pub fn open(data_dir: &Path) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn open(data_dir: &Path, default_archive_dir: PathBuf) -> Result<Self, Box<dyn std::error::Error>> {
         std::fs::create_dir_all(data_dir)?;
         let db_path = data_dir.join("crate-digger.sqlite");
         let conn = cd_core::db::open(&db_path)?;
@@ -40,6 +49,7 @@ impl AppState {
             player: Mutex::new(None),
             now_playing: Mutex::new(None),
             session_id: cd_core::util::new_id(),
+            default_archive_dir,
         })
     }
 
@@ -84,6 +94,30 @@ impl AppState {
             })
             .map(PathBuf::from)
             .unwrap_or_else(|| self.data_dir.join("staging"))
+    }
+
+    pub fn archive_dir(&self) -> PathBuf {
+        self.db()
+            .ok()
+            .and_then(|c| archive_dir_setting(&c))
+            .unwrap_or_else(|| self.default_archive_dir.clone())
+    }
+
+    /// Finish or undo archive moves interrupted by a crash or power loss.
+    pub fn recover_archive(&self) {
+        let cfg = cd_core::archive::ArchiveConfig {
+            root: self.archive_dir(),
+            force_copy: false,
+        };
+        if let Ok(conn) = self.db() {
+            match cd_core::archive::recover(&conn, &cfg) {
+                Ok(r) if r.finished > 0 || !r.failed.is_empty() => {
+                    tracing::info!(?r, "recovered archive moves")
+                }
+                Ok(_) => {}
+                Err(e) => tracing::error!("archive recovery failed: {e}"),
+            }
+        }
     }
 
     /// Run a closure on a fresh connection in the background, for work that

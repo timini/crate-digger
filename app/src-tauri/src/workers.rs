@@ -5,6 +5,7 @@ use std::time::Duration;
 
 use cd_core::acquisition::{AcquireHandler, AnalyseHandler, ValidateHandler};
 use cd_core::adapters::demo::{DemoAcquirer, DemoSource};
+use cd_core::archive::ArchiveHandler;
 use cd_core::discovery::DiscoverHandler;
 use cd_core::jobs::worker::Handler;
 use cd_core::library::{AudioProbe, ImportHandler};
@@ -31,5 +32,13 @@ pub fn handlers(state: &AppState) -> Vec<Arc<dyn Handler>> {
         }),
         Arc::new(ValidateHandler { probe: probe.clone() }),
         Arc::new(AnalyseHandler { probe }),
+        Arc::new(ArchiveHandler {
+            root: {
+                let default = state.default_archive_dir.clone();
+                Arc::new(move |conn| {
+                    crate::state::archive_dir_setting(conn).unwrap_or_else(|| default.clone())
+                })
+            },
+        }),
     ]
 }

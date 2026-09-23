@@ -21,7 +21,13 @@ pub fn run() {
                 Some(dir) => dir.into(),
                 None => app.path().app_data_dir()?,
             };
-            let state = state::AppState::open(&data_dir)?;
+            let default_archive = app
+                .path()
+                .audio_dir()
+                .map(|d| d.join("Crate Digger"))
+                .unwrap_or_else(|_| data_dir.join("archive"));
+            let state = state::AppState::open(&data_dir, default_archive)?;
+            state.recover_archive();
             let handlers = workers::handlers(&state);
             state.start_workers(handlers)?;
             app.manage(state);
@@ -80,6 +86,8 @@ pub fn run() {
             commands::review::review_undo,
             commands::review::review_keep,
             commands::review::review_find_more,
+            commands::review::storage_status,
+            commands::review::staging_clear,
             commands::review::demo_discovery_get,
             commands::review::demo_discovery_set,
         ])

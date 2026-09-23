@@ -10,6 +10,22 @@
   ]
 
   let filter = $state(0)
+  let includeUnreviewed = $state(false)
+  let cleared: string | null = $state(null)
+
+  async function clearTemporary() {
+    try {
+      const r = await api.clearStaging(includeUnreviewed)
+      cleared =
+        `Removed ${r.removed_files} files (${formatBytes(r.freed_bytes)}). ` +
+        `${r.retained} kept or in playlists were left alone` +
+        (r.unreviewed_skipped ? `, and ${r.unreviewed_skipped} not yet reviewed.` : '.') +
+        ' Metadata, ratings and analysis are kept.'
+    } catch (e) {
+      error = String(e)
+    }
+    await load()
+  }
   let activity: Activity | null = $state(null)
   let error: string | null = $state(null)
   let timer: ReturnType<typeof setInterval> | undefined
@@ -67,6 +83,12 @@
       {#each activity.scheduler.daily as d}
         <div>{d.used} of {d.limit} {d.kind} jobs today</div>
       {/each}
+    </div>
+
+    <div class="clear">
+      <button onclick={clearTemporary}>Clear temporary files</button>
+      <label><input type="checkbox" bind:checked={includeUnreviewed} /> Include tracks not yet reviewed</label>
+      {#if cleared}<span class="muted">{cleared}</span>{/if}
     </div>
 
     {#each activity.connectors.filter((c) => c.status !== 'ok') as c}
@@ -130,6 +152,12 @@
     border: 1px solid var(--border);
     border-radius: 8px;
     margin: 12px 0;
+  }
+  .clear {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
   }
   .tabs {
     display: flex;

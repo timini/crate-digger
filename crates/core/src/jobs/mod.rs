@@ -25,6 +25,7 @@ pub mod kinds {
     pub const WAVEFORM: &str = "waveform";
     pub const DISCOVER: &str = "discover";
     pub const SYNC: &str = "sync";
+    pub const ARCHIVE: &str = "archive";
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

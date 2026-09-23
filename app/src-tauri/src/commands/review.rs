@@ -53,10 +53,49 @@ pub fn review_undo(state: State<'_, AppState>) -> CmdResult<Option<Undone>> {
 pub fn review_keep(state: State<'_, AppState>, track_id: String, keep: bool) -> CmdResult<()> {
     let conn = state.db()?;
     if keep {
-        review::keep(&conn, &track_id, now_ms()).map_err(err)
+        // Records the decision and queues the move into the archive.
+        cd_core::archive::keep_track(&conn, &track_id, now_ms()).map_err(err)?;
+        drop(conn);
+        state.notify_workers();
+        Ok(())
     } else {
+        // Audio already in the archive stays there; only the decision changes.
         review::unkeep(&conn, &track_id).map_err(err)
     }
+}
+
+#[derive(serde::Serialize)]
+pub struct StorageStatus {
+    staging_dir: String,
+    archive_dir: String,
+    staging_used_bytes: u64,
+    staging_budget_bytes: u64,
+}
+
+#[tauri::command]
+pub fn storage_status(state: State<'_, AppState>) -> CmdResult<StorageStatus> {
+    let status = state.scheduler.status(&*state.db()?).map_err(err)?;
+    Ok(StorageStatus {
+        staging_dir: state.staging_dir().display().to_string(),
+        archive_dir: state.archive_dir().display().to_string(),
+        staging_used_bytes: status.staging_used_bytes,
+        staging_budget_bytes: status.staging_budget_bytes,
+    })
+}
+
+/// Delete temporary audio that is not kept or in a playlist. Unreviewed
+/// tracks are only included when the user asks.
+#[tauri::command]
+pub async fn staging_clear(
+    state: State<'_, AppState>,
+    include_unreviewed: bool,
+) -> CmdResult<cd_core::archive::ClearSummary> {
+    let summary = super::blocking(&state, move |conn| {
+        cd_core::archive::clear_temporary(conn, include_unreviewed)
+    })
+    .await?;
+    state.notify_workers();
+    Ok(summary)
 }
 
 /// Ask for more candidates. Until real sources exist (#11) this only works

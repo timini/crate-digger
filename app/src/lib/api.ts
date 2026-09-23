@@ -291,6 +291,20 @@ export interface Undone {
   effective: RatingKind | null
 }
 
+export interface StorageStatus {
+  staging_dir: string
+  archive_dir: string
+  staging_used_bytes: number
+  staging_budget_bytes: number
+}
+
+export interface ClearSummary {
+  removed_files: number
+  freed_bytes: number
+  retained: number
+  unreviewed_skipped: number
+}
+
 export const api = {
   appInfo: () => invoke<AppInfo>('app_info'),
   activity: (states: JobState[], limit = 200) => invoke<Activity>('activity', { states, limit }),
@@ -341,4 +355,6 @@ export const api = {
   findMore: () => invoke<void>('review_find_more'),
   demoDiscovery: () => invoke<boolean>('demo_discovery_get'),
   setDemoDiscovery: (enabled: boolean) => invoke<void>('demo_discovery_set', { enabled }),
+  storageStatus: () => invoke<StorageStatus>('storage_status'),
+  clearStaging: (includeUnreviewed: boolean) => invoke<ClearSummary>('staging_clear', { includeUnreviewed }),
 }

@@ -24,3 +24,9 @@ walkdir = "2.5.0"
 cd-audio = { path = "../audio" }
 fail = { version = "0.5.1", features = ["failpoints"] }
 tempfile = "3.27.0"
+
+[target."cfg(windows)".dependencies]
+windows-sys = { version = "0.61.2", features = ["Win32_Storage_FileSystem", "Win32_Foundation"] }
+
+[target."cfg(unix)".dependencies]
+libc = "0.2.189"
