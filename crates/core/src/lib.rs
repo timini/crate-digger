@@ -9,6 +9,7 @@ extern crate self as cd_core;
 
 pub mod acquisition;
 pub mod adapters;
+pub mod analysis;
 pub mod archive;
 pub mod db;
 pub mod discovery;
