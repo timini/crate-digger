@@ -1,4 +1,6 @@
 //! Connection tests shown in Settings. Each makes one cheap authenticated request.
+use std::sync::Arc;
+
 use cd_core::adapters::{AdapterError, AdapterResult};
 
 use crate::config::Connections;
@@ -9,23 +11,25 @@ pub fn probe(
     service: &str,
     config: &Connections,
     secrets: &dyn SecretStore,
-    transport: &dyn Transport,
+    transport: Arc<dyn Transport>,
 ) -> AdapterResult<String> {
     config.validate()?;
-    let (mut req, credential, header, prefix, optional) = match service {
+    if service == "llm" {
+        // A model that cannot follow a reply schema is unusable, so test that directly.
+        return crate::llm::check(&*crate::llm::client(config, secrets, transport)?);
+    }
+    let (mut req, credential, header, prefix) = match service {
         "discogs" => (
             Request::get("https://api.discogs.com/oauth/identity"),
             Credential::Discogs,
             "Authorization",
             "Discogs token=",
-            false,
         ),
         "youtube" => (
             Request::get("https://www.googleapis.com/youtube/v3/videos?part=id&id=dQw4w9WgXcQ"),
             Credential::Youtube,
             "X-Goog-Api-Key",
             "",
-            false,
         ),
         "slskd" => (
             Request::get(format!(
@@ -35,20 +39,11 @@ pub fn probe(
             Credential::Slskd,
             "X-API-Key",
             "",
-            false,
-        ),
-        "llm" => (
-            Request::get(format!("{}/models", config.llm_endpoint.trim_end_matches('/'))),
-            Credential::Llm,
-            "Authorization",
-            "Bearer ",
-            true,
         ),
         _ => return Err(AdapterError::Invalid("Unknown connection.".into())),
     };
     match secrets.get(credential)? {
         Some(secret) => req.headers.push((header.into(), format!("{prefix}{secret}"))),
-        None if optional => (),
         None => {
             return Err(AdapterError::Auth(
                 "Save this service's credentials in Settings first.".into(),
@@ -75,11 +70,11 @@ mod tests {
     }
 
     impl Fake {
-        fn new(status: u16) -> Self {
-            Self {
+        fn new(status: u16) -> Arc<Self> {
+            Arc::new(Self {
                 status,
                 seen: Mutex::new(vec![]),
-            }
+            })
         }
     }
 
@@ -99,7 +94,7 @@ mod tests {
         let fake = Fake::new(200);
         let store = MemoryStore::default();
         for service in ["discogs", "youtube", "slskd"] {
-            let e = probe(service, &Connections::default(), &store, &fake).unwrap_err();
+            let e = probe(service, &Connections::default(), &store, fake.clone()).unwrap_err();
             assert!(matches!(e, AdapterError::Auth(_)));
         }
         assert!(fake.seen.lock().unwrap().is_empty());
@@ -114,8 +109,8 @@ mod tests {
             .set(Credential::SoulseekPassword, Some("soulseek-secret"))
             .unwrap();
         let fake = Fake::new(200);
-        probe("discogs", &Connections::default(), &store, &fake).unwrap();
-        probe("youtube", &Connections::default(), &store, &fake).unwrap();
+        probe("discogs", &Connections::default(), &store, fake.clone()).unwrap();
+        probe("youtube", &Connections::default(), &store, fake.clone()).unwrap();
         let seen = fake.seen.lock().unwrap();
         let discogs = format!("{:?}", seen[0]);
         let youtube = format!("{:?}", seen[1]);
@@ -125,14 +120,10 @@ mod tests {
     }
 
     #[test]
-    fn local_model_needs_no_key_and_errors_hide_the_secret() {
-        let fake = Fake::new(200);
+    fn rejected_credentials_are_not_echoed() {
         let store = MemoryStore::default();
-        probe("llm", &Connections::default(), &store, &fake).unwrap();
-        assert!(fake.seen.lock().unwrap()[0].1.is_empty());
-
         store.set(Credential::Discogs, Some("rejected-secret")).unwrap();
-        let e = probe("discogs", &Connections::default(), &store, &Fake::new(401)).unwrap_err();
+        let e = probe("discogs", &Connections::default(), &store, Fake::new(401)).unwrap_err();
         assert!(matches!(e, AdapterError::Auth(_)));
         assert!(!e.to_string().contains("rejected-secret"));
     }

@@ -8,7 +8,7 @@
   let busy = $state(false)
   let secrets: Record<string, string> = $state({})
   const credentials = [
-    ['llm', 'Model API key (optional for local models)'],
+    ['llm', 'Model API key (not needed for local models)'],
     ['discogs', 'Discogs personal token'], ['youtube', 'YouTube Data API key'],
     ['soulseek_username', 'Soulseek username'], ['soulseek_password', 'Soulseek password'],
     ['slskd', 'External slskd API key'],
@@ -22,6 +22,15 @@
   onMount(() => { void run(async () => {
     config = await connections.get(); seeds = await connections.seeds()
   }, '') })
+  const defaultEndpoints: Record<string, string> = {
+    openai_compatible: 'http://localhost:11434/v1',
+    anthropic: 'https://api.anthropic.com/v1',
+  }
+  function providerChanged() {
+    if (config && Object.values(defaultEndpoints).includes(config.llm_endpoint)) {
+      config.llm_endpoint = defaultEndpoints[config.llm_provider]
+    }
+  }
   async function saveCredential(key: string) {
     const value = secrets[key]
     if (!value) return
@@ -36,12 +45,12 @@
 {#if config}
   <fieldset disabled={busy}>
     <legend>Model and Soulseek</legend>
-    <label>Model provider <select bind:value={config.llm_provider}>
+    <label>Model provider <select bind:value={config.llm_provider} onchange={providerChanged}>
       <option value="openai_compatible">OpenAI compatible (including Ollama, LM Studio and llama.cpp)</option>
       <option value="anthropic">Anthropic</option>
     </select></label>
     <label>Model endpoint <input bind:value={config.llm_endpoint} placeholder="http://localhost:11434/v1" /></label>
-    <label>Model name <input bind:value={config.llm_model} /></label>
+    <label>Model name <input bind:value={config.llm_model} placeholder="qwen2.5-coder:latest" /></label>
     <label class="check"><input type="checkbox" bind:checked={config.external_slskd} />Use an existing slskd instance</label>
     {#if config.external_slskd}
       <label>slskd endpoint <input bind:value={config.slskd_endpoint} /></label>

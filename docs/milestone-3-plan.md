@@ -45,7 +45,7 @@ checks as they complete; the plan itself is not acceptance evidence.
 | Area | Required evidence | Status |
 | --- | --- | --- |
 | Connections | Keychain errors, secret isolation, skippable UI | Done: `cd-connectors` probe and credential tests (missing credential stops before any request, each service gets only its own secret, rejected credentials are not echoed); `Connections.test.ts` (secret only sent to the keychain command, seeds work without connections). Resource limits stay in Settings, not onboarding. |
-| LLM | Both protocols, schema rejection, prompt injection, live Ollama | Pending |
+| LLM | Both protocols, schema rejection, prompt injection, live Ollama | Done: `cd-connectors` `llm` tests (request and reply shapes for both protocols with fakes, one retry then failure on invalid replies, unknown tools and out-of-bounds arguments never run, injected text cannot close its wrapper or change the prompt or tool set, last turn may only finish). Live on Ollama 0.34.2 with qwen2.5-coder 7B (`tests/live_llm.rs`, ignored in CI): structured check passes; with a hostile page the agent used only its tool, but copied the injected artist into its answer. Model output is therefore never trusted on its own; step 3 requires independent evidence before a suggestion is verified. |
 | Discovery | Discogs, robots, paste, evidence, refresh, feedback seeds | Pending |
 | YouTube | Verified references, alternatives, correction precedence | Pending |
 | Acquisition | Version ambiguity, quality, restart, managed process lifecycle | Pending |

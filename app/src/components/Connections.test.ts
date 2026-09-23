@@ -28,3 +28,13 @@ it('saves editable seeds without requiring a connection', async () => {
   await fireEvent.click(screen.getByText('Save seeds'))
   await waitFor(() => expect(calls.find(c => c.cmd === 'discovery_seeds_save')?.args).toEqual({ seeds: [{ kind: 'artist', value: 'Fixture artist' }] }))
 })
+it('switches to the provider default endpoint unless one was customised', async () => {
+  render(Connections)
+  const provider = await screen.findByLabelText('Model provider') as HTMLSelectElement
+  const endpoint = screen.getByLabelText('Model endpoint') as HTMLInputElement
+  await fireEvent.change(provider, { target: { value: 'anthropic' } })
+  expect(endpoint.value).toBe('https://api.anthropic.com/v1')
+  await fireEvent.input(endpoint, { target: { value: 'https://proxy.example/v1' } })
+  await fireEvent.change(provider, { target: { value: 'openai_compatible' } })
+  expect(endpoint.value).toBe('https://proxy.example/v1')
+})

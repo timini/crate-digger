@@ -65,7 +65,8 @@ pub async fn connection_test(state: State<'_, AppState>, service: String) -> Cmd
     let secrets = state.secrets.clone();
     let config = connections_get(state)?;
     tauri::async_runtime::spawn_blocking(move || {
-        cd_connectors::probe::probe(&service, &config, &*secrets, &Http::default()).map_err(err)
+        cd_connectors::probe::probe(&service, &config, &*secrets, std::sync::Arc::new(Http::default()))
+            .map_err(err)
     })
     .await
     .map_err(err)?
