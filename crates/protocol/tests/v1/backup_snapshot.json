@@ -1,0 +1,41 @@
+{
+  "created_at_ms": 1790164800000,
+  "playlists": [
+    {
+      "name": "Friday",
+      "tracks": [
+        "t1"
+      ]
+    }
+  ],
+  "ratings": [
+    {
+      "at_ms": 1790164800000,
+      "kind": "star3",
+      "track": "t1"
+    }
+  ],
+  "seeds": [
+    {
+      "kind": "artist",
+      "value": "Kerri Chandler"
+    }
+  ],
+  "tracks": [
+    {
+      "fingerprint_hash": "fp:3f9a0c12",
+      "id": "t1",
+      "kept": true,
+      "metadata": {
+        "artist": "Kerri Chandler",
+        "duration_ms": 392000,
+        "label": "Kerri Chandler",
+        "mix": null,
+        "release": "Downtown EP Pt. 2",
+        "title": "House Is House",
+        "year": 2025
+      }
+    }
+  ],
+  "version": 1
+}

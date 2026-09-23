@@ -1,0 +1,43 @@
+{
+  "contributions": [
+    {
+      "correction": false,
+      "features": {
+        "embedding": "1280 values",
+        "key_camelot": "8A",
+        "loudness_lufs": -9.5,
+        "tempo_bpm": 124.0,
+        "version": {
+          "model_id": "discogs-effnet-bsdynamic-1",
+          "preprocessing_version": "essentia-musicnn-input-16k-v1",
+          "weights_checksum": "sha256:a280825b334797cf677939db8cd5762c0392aedd0ca6415dbc1cd083f045e43c"
+        }
+      },
+      "idempotency_key": "c-018f2a7e-1",
+      "metadata": {
+        "artist": "Kerri Chandler",
+        "duration_ms": 392000,
+        "label": "Kerri Chandler",
+        "mix": null,
+        "release": "Downtown EP Pt. 2",
+        "title": "House Is House",
+        "year": 2025
+      },
+      "recording": {
+        "external_ids": [
+          {
+            "id": "36471139",
+            "source": "discogs_release"
+          }
+        ],
+        "fingerprint_hash": "fp:3f9a0c12"
+      },
+      "references": [
+        {
+          "kind": "youtube",
+          "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+        }
+      ]
+    }
+  ]
+}
