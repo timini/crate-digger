@@ -28,6 +28,7 @@ pub fn store(conn: &Connection, track_id: &str, file_id: &str, a: &Analysis) -> 
     let tx = conn.unchecked_transaction()?;
 
     let fp_bytes: Vec<u8> = a.fingerprint.data.iter().flat_map(|v| v.to_le_bytes()).collect();
+    let fp_id = new_id();
     tx.execute(
         "INSERT INTO fingerprint (id, track_id, audio_file_id, algorithm, duration_ms, data, created_at)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
@@ -35,7 +36,7 @@ pub fn store(conn: &Connection, track_id: &str, file_id: &str, a: &Analysis) -> 
              track_id = excluded.track_id, duration_ms = excluded.duration_ms, data = excluded.data,
              created_at = excluded.created_at",
         params![
-            new_id(),
+            fp_id,
             track_id,
             file_id,
             a.fingerprint.algorithm,
@@ -44,6 +45,12 @@ pub fn store(conn: &Connection, track_id: &str, file_id: &str, a: &Analysis) -> 
             now
         ],
     )?;
+    let stored_id: String = tx.query_row(
+        "SELECT id FROM fingerprint WHERE audio_file_id = ?1 AND algorithm = ?2",
+        params![file_id, a.fingerprint.algorithm],
+        |r| r.get(0),
+    )?;
+    index_fingerprint(&tx, &stored_id, &fp_bytes)?;
 
     let mut versions: Vec<FeatureVersion> = Vec::new();
     for e in &a.embeddings {
@@ -132,6 +139,25 @@ pub fn store(conn: &Connection, track_id: &str, file_id: &str, a: &Analysis) -> 
         )?;
     }
     tx.commit()?;
+    Ok(())
+}
+
+/// Every third fingerprint value, as lookup keys. Re-encodes of the same
+/// audio share a good fraction of exact values; unrelated audio shares
+/// almost none.
+pub fn index_fingerprint(conn: &Connection, fingerprint_id: &str, data: &[u8]) -> Result<()> {
+    conn.execute(
+        "DELETE FROM fingerprint_key WHERE fingerprint_id = ?1",
+        params![fingerprint_id],
+    )?;
+    let mut stmt =
+        conn.prepare_cached("INSERT INTO fingerprint_key (key, fingerprint_id) VALUES (?1, ?2)")?;
+    for chunk in data.chunks_exact(4).step_by(3) {
+        let v = u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]);
+        if v != 0 {
+            stmt.execute(params![v as i64, fingerprint_id])?;
+        }
+    }
     Ok(())
 }
 
@@ -314,4 +340,44 @@ pub fn plan(conn: &Connection, v: &FeatureVersion, now: i64) -> Result<Plan> {
         }
     }
     Ok(plan)
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct AnalysisSummary {
+    pub model: String,
+    pub state: Option<AnalysisStatus>,
+    pub tempo: Option<f64>,
+    pub tempo_confidence: Option<f64>,
+    pub key: Option<serde_json::Value>,
+    pub loudness_lufs: Option<f64>,
+    pub quality: Option<serde_json::Value>,
+}
+
+/// What the latest analysis at version `v` found, for display.
+pub fn summary(conn: &Connection, track_id: &str, v: &FeatureVersion) -> Result<AnalysisSummary> {
+    let row: Option<(Option<f64>, Option<f64>, Option<String>)> = conn
+        .query_row(
+            "SELECT tempo, loudness_lufs, details FROM feature_record
+             WHERE track_id = ?1 AND model_id = ?2 AND weights_checksum = ?3 AND preprocessing_version = ?4
+               AND segment_index IS NULL ORDER BY created_at DESC LIMIT 1",
+            params![track_id, v.model_id, v.weights_checksum, v.preprocessing_version],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+        )
+        .optional()?;
+    let details: Option<serde_json::Value> = row
+        .as_ref()
+        .and_then(|r| r.2.as_deref())
+        .and_then(|d| serde_json::from_str(d).ok());
+    Ok(AnalysisSummary {
+        model: v.model_id.clone(),
+        state: status(conn, track_id, v)?,
+        tempo: row.as_ref().and_then(|r| r.0),
+        tempo_confidence: details.as_ref().and_then(|d| d["tempo_confidence"].as_f64()),
+        key: details
+            .as_ref()
+            .map(|d| d["key"].clone())
+            .filter(|k| !k.is_null()),
+        loudness_lufs: row.as_ref().and_then(|r| r.1),
+        quality: details.as_ref().map(|d| d["quality"].clone()),
+    })
 }

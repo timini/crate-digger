@@ -18,6 +18,7 @@ pub const MIGRATIONS: &[(i64, &str, &str)] = &[
     ),
     (5, "identity", include_str!("../migrations/0005_identity.sql")),
     (6, "analysis", include_str!("../migrations/0006_analysis.sql")),
+    (7, "matching", include_str!("../migrations/0007_matching.sql")),
 ];
 
 pub fn latest_version() -> i64 {
@@ -86,12 +87,43 @@ pub fn migrate_to(conn: &mut Connection, target: i64) -> Result<()> {
         }
         let tx = conn.transaction()?;
         tx.execute_batch(sql)?;
+        after_migration(&tx, *version)?;
         tx.execute(
             "INSERT INTO schema_migrations (version, name, applied_at) VALUES (?1, ?2, ?3)",
             rusqlite::params![version, name, crate::util::now_ms()],
         )?;
         tx.commit()?;
         tracing::info!(version, name, "applied migration");
+    }
+    Ok(())
+}
+
+/// Data changes that need Rust code, run inside the migration's transaction.
+fn after_migration(conn: &Connection, version: i64) -> Result<()> {
+    if version == 7 {
+        let rows: Vec<(String, Option<String>)> = {
+            let mut stmt = conn.prepare("SELECT track_id, title FROM track_meta")?;
+            let rows = stmt
+                .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?
+                .collect::<std::result::Result<Vec<_>, _>>()?;
+            rows
+        };
+        for (track, title) in rows {
+            conn.execute(
+                "UPDATE track_meta SET title_key = ?2 WHERE track_id = ?1",
+                rusqlite::params![track, title.map(|t| crate::identity::normalize::title_key(&t))],
+            )?;
+        }
+        let fps: Vec<(String, Vec<u8>)> = {
+            let mut stmt = conn.prepare("SELECT id, data FROM fingerprint")?;
+            let rows = stmt
+                .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?
+                .collect::<std::result::Result<Vec<_>, _>>()?;
+            rows
+        };
+        for (id, data) in fps {
+            crate::analysis::store::index_fingerprint(conn, &id, &data)?;
+        }
     }
     Ok(())
 }

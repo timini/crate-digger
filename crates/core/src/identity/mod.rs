@@ -4,6 +4,8 @@
 //! Decisions come from [`policy::decide`]; this module stores the evidence,
 //! applies automatic verdicts and keeps a review queue for the rest.
 
+pub mod fingerprint;
+pub mod matching;
 pub mod normalize;
 pub mod policy;
 
@@ -345,5 +347,7 @@ pub fn versions(conn: &Connection, track_id: &str) -> Result<Vec<Version>> {
         .collect()
 }
 
+#[cfg(test)]
+mod matching_tests;
 #[cfg(test)]
 mod tests;

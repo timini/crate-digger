@@ -540,6 +540,7 @@ dependencies = [
  "libc",
  "lofty",
  "rusqlite",
+ "rusty-chromaprint",
  "serde",
  "serde_json",
  "tempfile",

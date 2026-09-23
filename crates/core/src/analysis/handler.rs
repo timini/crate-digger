@@ -82,6 +82,10 @@ pub struct AnalysisHandler {
 
 fn finish_candidate(ctx: &JobCtx<'_>, candidate_id: &Option<String>) -> Result<(), JobError> {
     if let Some(c) = candidate_id {
+        // Matching may have held the candidate back (already owned).
+        if !crate::identity::matching::candidate_is_active(ctx.conn, c).unwrap_or(false) {
+            return Ok(());
+        }
         // Analysis serves ranking; a track with playable audio can be
         // reviewed even if its analysis failed.
         match review::mark_ready(ctx.conn, c, ctx.now()) {

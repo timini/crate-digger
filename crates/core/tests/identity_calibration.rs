@@ -9,8 +9,10 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use cd_audio::fingerprint::{compare_with_speed, fingerprint_file, fingerprint_samples, Fingerprint};
+use cd_audio::fingerprint::{fingerprint_file, fingerprint_samples};
 use cd_audio::synth::{self, Audio, Song};
+use cd_core::analysis::protocol::FingerprintOut;
+use cd_core::identity::fingerprint::compare_with_speed;
 use cd_core::identity::fingerprint_evidence;
 use cd_core::identity::policy::{decide, Evidence, Side, Thresholds, Verdict};
 use serde::Deserialize;
@@ -88,12 +90,18 @@ impl Songs {
     }
 }
 
-fn fingerprint(src: &Source, speed: f64) -> Option<Fingerprint> {
-    match src {
-        Source::Samples(a) => Some(fingerprint_samples(&a.samples, synth::RATE, 2, speed)),
-        Source::File(p) => Some(fingerprint_file(p, speed).unwrap()),
-        Source::None => None,
-    }
+fn fingerprint(src: &Source, speed: f64) -> Option<FingerprintOut> {
+    let f = match src {
+        Source::Samples(a) => fingerprint_samples(&a.samples, synth::RATE, 2, speed),
+        Source::File(p) => fingerprint_file(p, speed).unwrap(),
+        Source::None => return None,
+    };
+    Some(FingerprintOut {
+        algorithm: f.algorithm,
+        data: f.data,
+        duration_ms: f.duration_ms,
+        speed: f.speed,
+    })
 }
 
 fn real_duration_ms(src: &Source) -> Option<u64> {

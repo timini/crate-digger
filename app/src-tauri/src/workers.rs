@@ -63,10 +63,24 @@ pub fn handlers(state: &AppState) -> Vec<Arc<dyn Handler>> {
             poll: Duration::from_millis(500),
         }),
         Arc::new(ValidateHandler { probe }),
-        Arc::new(AnalysisHandler {
-            analyzer: Arc::new(analyzer()),
-            after: None,
-        }),
+        {
+            let analyzer = Arc::new(analyzer());
+            let for_matching = analyzer.clone();
+            Arc::new(AnalysisHandler {
+                analyzer,
+                // Match each analysed file against the library.
+                after: Some(Arc::new(move |conn, track, file| {
+                    cd_core::identity::matching::match_track(
+                        conn,
+                        for_matching.as_ref(),
+                        track,
+                        file,
+                        &Default::default(),
+                    )
+                    .map(|_| ())
+                })),
+            })
+        },
         Arc::new(ArchiveHandler {
             root: {
                 let default = state.default_archive_dir.clone();

@@ -183,14 +183,14 @@ pub fn refresh_effective(conn: &Connection, track_id: &str) -> Result<()> {
     }
     conn.execute(
         "INSERT INTO track_meta (track_id, artist, title, mix, label, release, track_number,
-                                 year, genre, tempo, musical_key)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
+                                 year, genre, tempo, musical_key, title_key)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)
          ON CONFLICT (track_id) DO UPDATE SET
              artist = excluded.artist, title = excluded.title, mix = excluded.mix,
              label = excluded.label, release = excluded.release,
              track_number = excluded.track_number, year = excluded.year,
              genre = excluded.genre, tempo = excluded.tempo,
-             musical_key = excluded.musical_key",
+             musical_key = excluded.musical_key, title_key = excluded.title_key",
         params![
             track_id,
             m.artist,
@@ -202,7 +202,8 @@ pub fn refresh_effective(conn: &Connection, track_id: &str) -> Result<()> {
             m.year,
             m.genre,
             m.tempo,
-            m.musical_key
+            m.musical_key,
+            m.title.as_deref().map(crate::identity::normalize::title_key)
         ],
     )?;
     conn.execute(

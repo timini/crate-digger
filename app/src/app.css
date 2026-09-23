@@ -117,3 +117,15 @@ main {
 .error {
   color: var(--danger);
 }
+
+.badge {
+  display: inline-block;
+  min-width: 18px;
+  padding: 0 6px;
+  margin-left: 6px;
+  border-radius: 9px;
+  background: var(--accent);
+  color: #1a1206;
+  font-size: 11px;
+  text-align: center;
+}

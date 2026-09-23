@@ -1,13 +1,13 @@
-//! Audio fingerprints (Chromaprint) and their comparison.
+//! Audio fingerprints (Chromaprint). Comparing them is identity logic and
+//! lives in `cd_core::identity::fingerprint`.
 //!
-//! Fingerprints identify audio: the same recording matches across formats,
-//! bitrates and masters. A copy played at a different speed (a pitched
-//! copy) matches once the speed is compensated, which is done by telling
-//! the fingerprinter the audio's sample rate is scaled by that speed.
+//! A copy played at a different speed (a pitched copy) matches once the
+//! speed is compensated, which is done by telling the fingerprinter the
+//! audio's sample rate is scaled by that speed.
 
 use std::path::Path;
 
-use rusty_chromaprint::{match_fingerprints, Configuration, Fingerprinter};
+use rusty_chromaprint::{Configuration, Fingerprinter};
 use serde::{Deserialize, Serialize};
 
 use crate::decode::{AudioError, Decoder};
@@ -117,86 +117,4 @@ pub fn fingerprint_file(path: &Path, speed: f64) -> Result<Fingerprint, AudioErr
     }
     fp.map(Streaming::finish)
         .ok_or_else(|| AudioError::Corrupt("no audio frames could be decoded".into()))
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-pub struct Comparison {
-    /// 0 (no shared audio) to 1 (identical), over the aligned part.
-    pub score: f64,
-    /// Share of the longer recording covered by aligned audio. An excerpt or
-    /// an edit scores well but covers only part of the full recording.
-    pub coverage: f64,
-    /// Where B's audio starts within A, in seconds (negative if earlier).
-    pub offset_s: f64,
-}
-
-/// Bit errors per 32-bit item at which a segment counts as aligned. Random
-/// audio averages about 16.
-const MAX_SEGMENT_ERROR: f64 = 10.0;
-
-pub fn compare(a: &Fingerprint, b: &Fingerprint) -> Comparison {
-    let none = Comparison {
-        score: 0.0,
-        coverage: 0.0,
-        offset_s: 0.0,
-    };
-    if a.algorithm != b.algorithm || a.data.is_empty() || b.data.is_empty() {
-        return none;
-    }
-    let cfg = config();
-    let Ok(segments) = match_fingerprints(&a.data, &b.data, &cfg) else {
-        return none;
-    };
-    let aligned: Vec<_> = segments.iter().filter(|s| s.score <= MAX_SEGMENT_ERROR).collect();
-    let items: usize = aligned.iter().map(|s| s.items_count).sum();
-    if items == 0 {
-        return none;
-    }
-    let weighted_error: f64 = aligned
-        .iter()
-        .map(|s| s.score * s.items_count as f64)
-        .sum::<f64>()
-        / items as f64;
-    let longer = a.data.len().max(b.data.len()).max(1);
-    let longest = aligned.iter().max_by_key(|s| s.items_count).unwrap();
-    Comparison {
-        score: (1.0 - weighted_error / 16.0).clamp(0.0, 1.0),
-        coverage: (items as f64 / longer as f64).min(1.0),
-        offset_s: (longest.start1(&cfg) - longest.start2(&cfg)) as f64,
-    }
-}
-
-/// Compare B against A, also trying speed compensation around the speed
-/// implied by their lengths. Returns the best comparison and its speed.
-/// `b_at` fingerprints B at a given speed.
-pub fn compare_with_speed(
-    a: &Fingerprint,
-    b_at: impl Fn(f64) -> Option<Fingerprint>,
-    b_duration_ms: u64,
-) -> Option<(Comparison, f64)> {
-    let plain = b_at(1.0)?;
-    let mut best = (compare(a, &plain), 1.0);
-    // A strong match at normal speed needs no search. A weak alignment
-    // spread over the whole track is typical of a slightly pitched copy.
-    if best.0.score >= 0.6 && best.0.coverage >= 0.5 {
-        return Some(best);
-    }
-    // A pitched copy's length changes by the speed: speed = len(A) / len(B).
-    if a.duration_ms == 0 || b_duration_ms == 0 {
-        return Some(best);
-    }
-    let implied = a.duration_ms as f64 / b_duration_ms as f64;
-    if (implied - 1.0).abs() < 0.005 || (implied - 1.0).abs() > 0.12 {
-        return Some(best);
-    }
-    for delta in [0.0, -0.003, 0.003] {
-        let speed = implied + delta;
-        if let Some(fp) = b_at(speed) {
-            let c = compare(a, &fp);
-            if c.score * c.coverage > best.0.score * best.0.coverage {
-                best = (c, speed);
-            }
-        }
-    }
-    Some(best)
 }

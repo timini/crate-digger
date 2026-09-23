@@ -102,6 +102,9 @@ pub fn run() {
             commands::settings::settings_set_limits,
             commands::settings::settings_set_close_to_tray,
             commands::settings::onboarding_complete,
+            commands::identity::identity_conflicts,
+            commands::identity::identity_conflict_count,
+            commands::identity::identity_resolve,
             commands::review::demo_discovery_get,
             commands::review::demo_discovery_set,
         ])
