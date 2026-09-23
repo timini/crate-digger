@@ -26,6 +26,28 @@ pub const SOULSEEK_CONNECTOR: &str = "slskd";
 /// Seed discovery runs this often while the app is open and it is turned on.
 pub const REFRESH_INTERVAL_MS: i64 = 6 * 3_600_000;
 
+/// Tracks that became ready since the last rerank have no queue place yet.
+fn rank_new_arrivals(state: &AppState) {
+    use cd_core::analysis::handler::Analyzer;
+    let Ok(conn) = state.db() else { return };
+    let waiting: bool = conn
+        .query_row(
+            "SELECT EXISTS (SELECT 1 FROM candidate WHERE stage = 'ready' AND status = 'active' AND queue_rank IS NULL)",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap_or(false);
+    drop(conn);
+    if waiting {
+        let version = state.analyzer.version();
+        state.spawn_background("rerank", move |conn| {
+            if let Err(e) = cd_core::review::rerank(conn, &version) {
+                tracing::warn!("rerank failed: {e}");
+            }
+        });
+    }
+}
+
 /// Queues seed discovery every six hours while automatic discovery is on.
 /// A run that cannot proceed records why, so nothing fails silently.
 pub fn spawn_refresh(app: tauri::AppHandle) {
@@ -33,6 +55,7 @@ pub fn spawn_refresh(app: tauri::AppHandle) {
     std::thread::spawn(move || loop {
         std::thread::sleep(Duration::from_secs(60));
         let state = app.state::<AppState>();
+        rank_new_arrivals(&state);
         if !state.connections.read().unwrap().enabled {
             continue;
         }

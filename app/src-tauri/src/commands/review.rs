@@ -21,8 +21,12 @@ pub fn review_stats(state: State<'_, AppState>) -> CmdResult<QueueStats> {
 fn after_preference_change(state: &AppState) {
     // The rating is already on disk; reranking runs separately and never
     // touches the player.
-    state.spawn_background("rerank", |conn| {
-        if let Err(e) = review::rerank(conn) {
+    let version = {
+        use cd_core::analysis::handler::Analyzer;
+        state.analyzer.version()
+    };
+    state.spawn_background("rerank", move |conn| {
+        if let Err(e) = review::rerank(conn, &version) {
             tracing::warn!("rerank failed: {e}");
         }
     });

@@ -138,9 +138,15 @@ fn card(conn: &Connection, candidate_id: &str) -> Result<Option<ReviewCard>> {
     let reasons = {
         let mut stmt =
             conn.prepare("SELECT reason FROM explanation WHERE candidate_id = ?1 ORDER BY weight DESC")?;
-        let rows = stmt
+        let mut rows = stmt
             .query_map(params![candidate_id], |r| r.get(0))?
             .collect::<std::result::Result<Vec<String>, _>>()?;
+        let note: Option<String> = conn.query_row(
+            "SELECT rank_note FROM candidate WHERE id = ?1",
+            params![candidate_id],
+            |r| r.get(0),
+        )?;
+        rows.extend(note);
         rows
     };
     let evidence = {
@@ -205,7 +211,7 @@ pub fn next(conn: &Connection, session: &str, limit: i64) -> Result<Vec<ReviewCa
     let ids: Vec<String> = {
         let mut stmt = conn.prepare(&format!(
             "SELECT c.id FROM candidate c WHERE {READY_WHERE}
-             ORDER BY c.score IS NULL, c.score DESC, c.created_at LIMIT ?2"
+             ORDER BY c.queue_rank IS NULL, c.queue_rank, c.score IS NULL, c.score DESC, c.created_at LIMIT ?2"
         ))?;
         let rows = stmt
             .query_map(params![session, limit], |r| r.get(0))?
@@ -345,15 +351,12 @@ pub fn unkeep(conn: &Connection, track_id: &str) -> Result<()> {
     Ok(())
 }
 
-/// Recompute candidate scores after preferences change. Until personal
-/// ranking exists (#13) the score is the strength of the cultural evidence.
-pub fn rerank(conn: &Connection) -> Result<usize> {
-    Ok(conn.execute(
-        "UPDATE candidate SET score = COALESCE(
-             (SELECT MAX(confidence) FROM evidence e WHERE e.candidate_id = candidate.id), 0)
-         WHERE stage IN ('identified', 'acquisition_queued', 'downloading', 'validating', 'analysing', 'ready')",
-        [],
-    )?)
+/// Recompute scores and the review order after preferences change.
+pub fn rerank(
+    conn: &Connection,
+    v: &crate::analysis::FeatureVersion,
+) -> Result<crate::ranking::RerankSummary> {
+    crate::ranking::rerank(conn, v, &crate::ranking::DEFAULT)
 }
 
 #[cfg(test)]
