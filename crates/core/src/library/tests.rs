@@ -35,7 +35,7 @@ fn build_library(dir: &Path) {
     std::fs::write(dir.join("cover.jpg"), b"not audio").unwrap();
 }
 
-type Snapshot = BTreeMap<PathBuf, (u64, std::time::SystemTime, String)>;
+type Snapshot = BTreeMap<PathBuf, (u64, Option<std::time::SystemTime>, String)>;
 
 fn snapshot(dir: &Path) -> Snapshot {
     walkdir::WalkDir::new(dir)
@@ -43,14 +43,19 @@ fn snapshot(dir: &Path) -> Snapshot {
         .map(|e| e.unwrap())
         .map(|e| {
             let m = e.metadata().unwrap();
-            let bytes = if m.is_file() {
-                blake3::hash(&std::fs::read(e.path()).unwrap())
+            if m.is_file() {
+                let bytes = blake3::hash(&std::fs::read(e.path()).unwrap())
                     .to_hex()
-                    .to_string()
+                    .to_string();
+                (
+                    e.path().to_path_buf(),
+                    (m.len(), Some(m.modified().unwrap()), bytes),
+                )
             } else {
-                "dir".into()
-            };
-            (e.path().to_path_buf(), (m.len(), m.modified().unwrap(), bytes))
+                // Folder timestamps are left out: Windows updates them lazily
+                // after files are written, independent of anything we do.
+                (e.path().to_path_buf(), (0, None, "dir".into()))
+            }
         })
         .collect()
 }

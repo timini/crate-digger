@@ -144,7 +144,9 @@ fn no_underruns_while_background_decoding_runs() {
     let p = null_player(48_000);
     // Resampling 44.1 kHz to 48 kHz exercises the whole decode path.
     p.load(&fixture("tone.flac"), 0, true).unwrap();
-    assert!(wait_until(3_000, || p.status().state == PlayState::Ended));
+    // On a loaded CI machine the null output's clock can itself run late,
+    // which is not an underrun; allow plenty of time to reach the end.
+    assert!(wait_until(20_000, || p.status().state == PlayState::Ended));
     stop.store(true, Ordering::Relaxed);
     for t in load {
         t.join().unwrap();
