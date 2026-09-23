@@ -156,6 +156,10 @@ impl Acquirer for DemoAcquirer {
         "demo"
     }
 
+    fn exact_results(&self) -> bool {
+        true
+    }
+
     fn search(&self, query: &AcquisitionQuery) -> AdapterResult<Vec<SearchResult>> {
         let name = match &query.mix {
             Some(m) => format!("{} - {} ({m})", query.artist, query.title),
@@ -168,6 +172,7 @@ impl Acquirer for DemoAcquirer {
             duration_ms: Some(self.seconds as u64 * 1000),
             format: Some("wav".into()),
             bitrate_kbps: Some(1411),
+            ..Default::default()
         }])
     }
 

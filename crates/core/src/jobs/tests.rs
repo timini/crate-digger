@@ -724,3 +724,38 @@ fn worker_pool_runs_jobs_and_stops_cleanly() {
     assert_eq!(long, ("paused".to_string(), "quit".to_string()));
     no_reasonless_holds(&conn);
 }
+
+struct WaitingHandler;
+
+impl Handler for WaitingHandler {
+    fn kind(&self) -> &'static str {
+        "waiting"
+    }
+    fn run(&self, _: &mut JobCtx<'_>) -> std::result::Result<(), JobError> {
+        Err(JobError::Wait {
+            reason: "Queued on the uploader's side.".into(),
+            delay_ms: 60_000,
+        })
+    }
+}
+
+#[test]
+fn waiting_reschedules_without_using_attempts() {
+    let mut conn = crate::db::open_in_memory().unwrap();
+    let clock = TestClock::new();
+    let sched = default_scheduler(&clock);
+    let handlers: HashMap<&'static str, Arc<dyn Handler>> =
+        HashMap::from([("waiting", Arc::new(WaitingHandler) as Arc<dyn Handler>)]);
+    let id = add(&conn, "waiting", "w", clock.now());
+    let stop = AtomicBool::new(false);
+    for _ in 0..10 {
+        assert!(run_one(&mut conn, &sched, &handlers, &["waiting"], "w", &stop).unwrap());
+        // Not due again until the delay has passed.
+        assert!(!run_one(&mut conn, &sched, &handlers, &["waiting"], "w", &stop).unwrap());
+        clock.advance(60_000);
+    }
+    let job = get(&conn, &id).unwrap();
+    assert_eq!(job.state, JobState::Queued);
+    assert_eq!(job.attempts, 0);
+    assert_eq!(job.reason.as_deref(), Some("Queued on the uploader's side."));
+}

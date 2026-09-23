@@ -123,6 +123,7 @@ pub fn handlers(state: &AppState) -> Vec<Arc<dyn Handler>> {
             staging_root: state.staging_dir(),
             probe: probe.clone(),
             poll: Duration::from_millis(500),
+            queued_watch: cd_core::acquisition::QUEUED_WATCH,
         }),
         Arc::new(ValidateHandler { probe }),
         {

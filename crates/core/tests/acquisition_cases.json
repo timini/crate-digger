@@ -1,0 +1,64 @@
+{
+  "comment": "Labelled Soulseek result sets for the automatic download rule, following the categories of identity_cases.json: re-encodes, remasters, pitched copies, excerpts, edits, remixes, unrelated and mislabelled files. Each result is marked right (the wanted recording at acceptable quality) or not. expect is auto, choose or nothing. Paths use Soulseek's backslashes.",
+  "cases": [
+    { "name": "re-encodes: FLAC and MP3 320", "query": ["Alpha Unit", "First Light", null], "expect": "auto", "results": [
+      { "path": "@@a\\Music\\Alpha Unit - First Light.mp3", "format": "mp3", "kbps": 320, "secs": 301, "right": true },
+      { "path": "@@b\\Alpha Unit\\First Light EP\\01 - Alpha Unit - First Light.flac", "format": "flac", "secs": 300, "right": true } ] },
+    { "name": "re-encodes below 320 only", "query": ["Alpha Unit", "First Light", null], "expect": "choose", "results": [
+      { "path": "@@a\\Alpha Unit - First Light.mp3", "format": "mp3", "kbps": 192, "secs": 300, "right": false },
+      { "path": "@@b\\Alpha Unit - First Light.m4a", "format": "m4a", "kbps": 256, "secs": 300, "right": false } ] },
+    { "name": "remaster of the original", "query": ["Alpha Unit", "First Light", null], "expect": "auto", "results": [
+      { "path": "@@a\\Alpha Unit - First Light (2021 Remaster).flac", "format": "flac", "secs": 300, "right": true } ] },
+    { "name": "pitched copy only", "query": ["Alpha Unit", "First Light", null], "expect": "choose", "results": [
+      { "path": "@@a\\Alpha Unit - First Light (Pitched +4%).mp3", "format": "mp3", "kbps": 320, "secs": 288, "right": false } ] },
+    { "name": "pitched copy beside the original", "query": ["Alpha Unit", "First Light", null], "expect": "auto", "results": [
+      { "path": "@@a\\Alpha Unit - First Light (Pitched +4%).flac", "format": "flac", "secs": 288, "right": false },
+      { "path": "@@b\\Alpha Unit - First Light.flac", "format": "flac", "secs": 300, "right": true } ] },
+    { "name": "excerpt beside the original", "query": ["Alpha Unit", "First Light", null], "expect": "auto", "results": [
+      { "path": "@@a\\Alpha Unit - First Light (Preview).mp3", "format": "mp3", "kbps": 320, "secs": 45, "right": false },
+      { "path": "@@b\\Alpha Unit - First Light.mp3", "format": "mp3", "kbps": 320, "secs": 300, "right": true } ] },
+    { "name": "excerpt with no marker", "query": ["Alpha Unit", "First Light", null], "expect": "choose", "results": [
+      { "path": "@@a\\Alpha Unit - First Light.mp3", "format": "mp3", "kbps": 320, "secs": 30, "right": false } ] },
+    { "name": "radio edit when the original is wanted", "query": ["Alpha Unit", "First Light", null], "expect": "choose", "results": [
+      { "path": "@@a\\Alpha Unit - First Light (Radio Edit).flac", "format": "flac", "secs": 200, "right": false } ] },
+    { "name": "someone's edit when the original is wanted", "query": ["Alpha Unit", "First Light", null], "expect": "choose", "results": [
+      { "path": "@@a\\Alpha Unit - First Light (Gamma Edit).flac", "format": "flac", "secs": 330, "right": false } ] },
+    { "name": "remix wanted, original also shared", "query": ["Alpha Unit", "First Light", "Beta Remix"], "expect": "auto", "results": [
+      { "path": "@@a\\Alpha Unit - First Light.flac", "format": "flac", "secs": 300, "right": false },
+      { "path": "@@b\\Alpha Unit - First Light (Beta Remix).mp3", "format": "mp3", "kbps": 320, "secs": 390, "right": true } ] },
+    { "name": "original wanted, only remixes shared", "query": ["Alpha Unit", "First Light", null], "expect": "choose", "results": [
+      { "path": "@@a\\Alpha Unit - First Light (Beta Remix).flac", "format": "flac", "secs": 390, "right": false },
+      { "path": "@@b\\Alpha Unit - First Light (Delta Dub).flac", "format": "flac", "secs": 420, "right": false } ] },
+    { "name": "another remixer's version", "query": ["Alpha Unit", "First Light", "Beta Remix"], "expect": "choose", "results": [
+      { "path": "@@a\\Alpha Unit - First Light (Gamma Remix).flac", "format": "flac", "secs": 380, "right": false } ] },
+    { "name": "same title by another artist beside the right one", "query": ["Alpha Unit", "First Light", null], "expect": "auto", "results": [
+      { "path": "@@a\\Other Band - First Light.flac", "format": "flac", "secs": 250, "right": false },
+      { "path": "@@b\\Alpha Unit - First Light.flac", "format": "flac", "secs": 300, "right": true } ] },
+    { "name": "same title by another artist only", "query": ["Alpha Unit", "First Light", null], "expect": "choose", "results": [
+      { "path": "@@a\\Other Band - First Light.flac", "format": "flac", "secs": 250, "right": false } ] },
+    { "name": "longer title containing the wanted one", "query": ["Alpha Unit", "Light", null], "expect": "nothing", "results": [
+      { "path": "@@a\\Alpha Unit - First Light.flac", "format": "flac", "secs": 300, "right": false } ] },
+    { "name": "mislabelled: same name, different lengths", "query": ["Alpha Unit", "First Light", null], "expect": "choose", "results": [
+      { "path": "@@a\\Alpha Unit - First Light.flac", "format": "flac", "secs": 300, "right": true },
+      { "path": "@@b\\Alpha Unit - First Light.flac", "format": "flac", "secs": 420, "right": false } ] },
+    { "name": "cut from a DJ mix beside the original", "query": ["Alpha Unit", "First Light", null], "expect": "auto", "results": [
+      { "path": "@@a\\Fabric 99\\07 Alpha Unit - First Light (Mixed).mp3", "format": "mp3", "kbps": 320, "secs": 180, "right": false },
+      { "path": "@@b\\Alpha Unit - First Light.flac", "format": "flac", "secs": 300, "right": true } ] },
+    { "name": "live recording only", "query": ["Alpha Unit", "First Light", null], "expect": "choose", "results": [
+      { "path": "@@a\\Alpha Unit - First Light (Live at Club).flac", "format": "flac", "secs": 360, "right": false } ] },
+    { "name": "extended mix wanted, file does not say", "query": ["Alpha Unit", "First Light", "Extended Mix"], "expect": "choose", "results": [
+      { "path": "@@a\\Alpha Unit - First Light.flac", "format": "flac", "secs": 400, "right": false } ] },
+    { "name": "extended mix wanted and named", "query": ["Alpha Unit", "First Light", "Extended Mix"], "expect": "auto", "results": [
+      { "path": "@@a\\Alpha Unit - First Light.mp3", "format": "mp3", "kbps": 320, "secs": 240, "right": false },
+      { "path": "@@b\\Alpha Unit - First Light (Extended Mix) [FIX001].flac", "format": "flac", "secs": 400, "right": true } ] },
+    { "name": "featured artist written differently", "query": ["Alpha Unit feat. Singer", "First Light", null], "expect": "auto", "results": [
+      { "path": "@@a\\Alpha Unit ft. Singer - First Light.flac", "format": "flac", "secs": 300, "right": true } ] },
+    { "name": "artist only in the folder", "query": ["Alpha Unit", "First Light", null], "expect": "auto", "results": [
+      { "path": "@@a\\Music\\Alpha Unit\\2020 - First Light EP\\A1 First Light.flac", "format": "flac", "secs": 300, "right": true } ] },
+    { "name": "no length listed", "query": ["Alpha Unit", "First Light", null], "expect": "choose", "results": [
+      { "path": "@@a\\Alpha Unit - First Light.flac", "format": "flac", "right": true } ] },
+    { "name": "title in a folder only", "query": ["Alpha Unit", "First Light", null], "expect": "nothing", "results": [
+      { "path": "@@a\\Alpha Unit\\First Light\\01 - Alpha Unit - Intro.flac", "format": "flac", "secs": 90, "right": false } ] },
+    { "name": "no results", "query": ["Alpha Unit", "First Light", null], "expect": "nothing", "results": [] }
+  ]
+}

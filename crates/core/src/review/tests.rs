@@ -292,6 +292,7 @@ impl Rig {
                 staging_root: staging,
                 probe: probe.clone(),
                 poll: Duration::from_millis(10),
+                queued_watch: crate::acquisition::QUEUED_WATCH,
             }),
             Arc::new(ValidateHandler { probe }),
             Arc::new(AnalysisHandler {

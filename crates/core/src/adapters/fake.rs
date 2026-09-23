@@ -184,6 +184,10 @@ impl Acquirer for FakeAcquirer {
         "fake_acquirer"
     }
 
+    fn exact_results(&self) -> bool {
+        true
+    }
+
     fn search(&self, query: &AcquisitionQuery) -> AdapterResult<Vec<SearchResult>> {
         self.failure.check()?;
         Ok(self
@@ -199,6 +203,7 @@ impl Acquirer for FakeAcquirer {
                     duration_ms: None,
                     format: Some(ext.to_string()),
                     bitrate_kbps: None,
+                    ..Default::default()
                 }
             })
             .collect())

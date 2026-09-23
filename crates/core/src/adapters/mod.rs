@@ -116,14 +116,24 @@ pub struct AcquisitionQuery {
     pub mix: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct SearchResult {
     pub result_id: String,
+    /// The full path as the source shares it.
     pub filename: String,
     pub size_bytes: u64,
     pub duration_ms: Option<u64>,
     pub format: Option<String>,
     pub bitrate_kbps: Option<u32>,
+    /// Who shares it, and how soon they could send it.
+    #[serde(default)]
+    pub username: Option<String>,
+    #[serde(default)]
+    pub free_slot: Option<bool>,
+    #[serde(default)]
+    pub queue_length: Option<u64>,
+    #[serde(default)]
+    pub upload_speed: Option<u64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -139,6 +149,11 @@ pub enum TransferStatus {
 /// Audio acquisition (slskd in milestone 3).
 pub trait Acquirer: Send + Sync {
     fn id(&self) -> &str;
+    /// True when results are made for the exact query (demo and test
+    /// sources), so the matching rule and the user's choice are skipped.
+    fn exact_results(&self) -> bool {
+        false
+    }
     fn search(&self, query: &AcquisitionQuery) -> AdapterResult<Vec<SearchResult>>;
     /// Start a transfer into `dest_dir`. Calling again with the same
     /// idempotency key returns the existing transfer instead of starting a

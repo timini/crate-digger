@@ -304,6 +304,7 @@ fn verified_candidates_wait_visibly_when_no_download_source_is_set_up() {
             staging_root: staging,
             probe: Arc::new(crate::real_probe::RealProbe),
             poll: std::time::Duration::from_millis(10),
+            queued_watch: crate::acquisition::QUEUED_WATCH,
         }),
     );
     request_discovery(&rig.conn, "fake_source", 10, 1).unwrap();
