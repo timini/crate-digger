@@ -8,6 +8,8 @@
 pub mod embed;
 pub mod frames;
 pub mod key;
+pub mod mel16k;
+pub mod models;
 pub mod tempo;
 
 use std::io::{BufRead, Write};
@@ -106,8 +108,13 @@ pub fn fingerprint_out(fp: fingerprint::Fingerprint) -> FingerprintOut {
     }
 }
 
-/// Analyse a file. `progress` receives the decoded position in ms.
-pub fn analyse(path: &Path, progress: &dyn Fn(u64)) -> Result<Analysis, AudioError> {
+/// Analyse a file. `models` add pretrained embeddings to the built-in
+/// baseline. `progress` receives the decoded position in ms.
+pub fn analyse(
+    path: &Path,
+    models: &[models::LoadedModel],
+    progress: &dyn Fn(u64),
+) -> Result<Analysis, AudioError> {
     let started = Instant::now();
     let mut dec = Decoder::open(path)?;
     let (rate, channels) = (dec.info.sample_rate, dec.info.channels.max(1));
@@ -120,6 +127,10 @@ pub fn analyse(path: &Path, progress: &dyn Fn(u64)) -> Result<Analysis, AudioErr
     let mut buf = Vec::new();
     let mut last_report = 0u64;
     let (mut blocks, mut block_peak, mut in_block) = (Vec::new(), 0f32, 0usize);
+    // Pretrained models need 16 kHz mel frames; only computed when used.
+    let mut to_16k = (!models.is_empty()).then(|| cd_audio::resample::MonoResampler::new(rate, mel16k::RATE));
+    let mut mel = mel16k::MelFrames::new();
+    let mut mono16k = Vec::new();
 
     while dec.next_chunk(&mut buf)? {
         let ch = dec.info.channels.max(1) as usize;
@@ -142,6 +153,11 @@ pub fn analyse(path: &Path, progress: &dyn Fn(u64)) -> Result<Analysis, AudioErr
             }
         }
         frames.push(&mono);
+        if let Some(r) = to_16k.as_mut() {
+            mono16k.clear();
+            r.process(&mono, &mut mono16k);
+            mel.push(&mono16k);
+        }
         let pos = dec.position_ms();
         if pos >= last_report + 1000 {
             last_report = pos;
@@ -150,6 +166,11 @@ pub fn analyse(path: &Path, progress: &dyn Fn(u64)) -> Result<Analysis, AudioErr
     }
     if in_block > 0 {
         blocks.push(block_peak);
+    }
+    if let Some(r) = to_16k.as_mut() {
+        mono16k.clear();
+        r.finish(&mut mono16k);
+        mel.push(&mono16k);
     }
     let frame_count = samples / channels as u64;
     if frame_count == 0 {
@@ -183,6 +204,48 @@ pub fn analyse(path: &Path, progress: &dyn Fn(u64)) -> Result<Analysis, AudioErr
             segment: None,
             vector: embed::mean(&vectors),
         });
+    }
+    let mel_fps = mel16k::MelFrames::frames_per_second();
+    for m in models {
+        let mut model_vectors = Vec::new();
+        for (i, s) in segs.iter().enumerate() {
+            let a = ((s.start_ms as f32 / 1000.0) * mel_fps) as usize;
+            let b = (((s.end_ms as f32 / 1000.0) * mel_fps) as usize).min(mel.frames.len());
+            if a >= b {
+                continue;
+            }
+            match m.embed(&mel.frames[a..b]) {
+                Ok(Some(v)) => {
+                    model_vectors.push(v.clone());
+                    embeddings.push(EmbeddingOut {
+                        version: m.version(),
+                        segment: Some(i),
+                        vector: v,
+                    });
+                }
+                Ok(None) => {}
+                Err(e) => {
+                    return Err(AudioError::Unsupported(format!(
+                        "model {} failed: {e}",
+                        m.info.id
+                    )))
+                }
+            }
+        }
+        if !model_vectors.is_empty() {
+            let n = model_vectors.len() as f32;
+            let mut mean = vec![0f32; model_vectors[0].len()];
+            for v in &model_vectors {
+                for (a, b) in mean.iter_mut().zip(v) {
+                    *a += b / n;
+                }
+            }
+            embeddings.push(EmbeddingOut {
+                version: m.version(),
+                segment: None,
+                vector: mean,
+            });
+        }
     }
 
     let (tempo_bpm, tempo_confidence) = match tempo::estimate(all, fps) {
@@ -285,8 +348,27 @@ pub fn worker_main() {
     };
 
     let result = match request {
-        Request::Analyse { path } => analyse(Path::new(&path), &|ms| decoded.store(ms, Ordering::Relaxed))
-            .map(|a| Message::Analysis(Box::new(a))),
+        Request::Analyse { path, models: refs } => {
+            let mut loaded = Vec::new();
+            for r in &refs {
+                match models::load(r) {
+                    Ok(m) => loaded.push(m),
+                    Err(message) => {
+                        done.store(true, Ordering::Relaxed);
+                        let _ = heartbeat.join();
+                        send(&Message::Error {
+                            kind: ErrorKind::Internal,
+                            message,
+                        });
+                        return;
+                    }
+                }
+            }
+            analyse(Path::new(&path), &loaded, &|ms| {
+                decoded.store(ms, Ordering::Relaxed)
+            })
+            .map(|a| Message::Analysis(Box::new(a)))
+        }
         Request::Fingerprint { path, speed } => {
             cd_audio::fingerprint::fingerprint_file(Path::new(&path), speed)
                 .map(|f| Message::Fingerprint(fingerprint_out(f)))

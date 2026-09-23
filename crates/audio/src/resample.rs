@@ -111,6 +111,42 @@ impl StereoResampler {
     }
 }
 
+/// Mono conversion, built on the stereo resampler.
+pub struct MonoResampler {
+    inner: StereoResampler,
+    stereo: Vec<f32>,
+    out: Vec<f32>,
+}
+
+impl MonoResampler {
+    pub fn new(from: u32, to: u32) -> Self {
+        MonoResampler {
+            inner: StereoResampler::new(from, to),
+            stereo: Vec::new(),
+            out: Vec::new(),
+        }
+    }
+
+    fn fold(&mut self, out: &mut Vec<f32>) {
+        out.extend(self.out.chunks_exact(2).map(|f| f[0]));
+        self.out.clear();
+    }
+
+    pub fn process(&mut self, mono: &[f32], out: &mut Vec<f32>) {
+        self.stereo.clear();
+        self.stereo.extend(mono.iter().flat_map(|s| [*s, *s]));
+        let stereo = std::mem::take(&mut self.stereo);
+        self.inner.process(&stereo, &mut self.out);
+        self.stereo = stereo;
+        self.fold(out);
+    }
+
+    pub fn finish(&mut self, out: &mut Vec<f32>) {
+        self.inner.finish(&mut self.out);
+        self.fold(out);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -123,6 +159,16 @@ mod tests {
                 [v, v]
             })
             .collect()
+    }
+
+    #[test]
+    fn mono_downsampling_keeps_length_ratio() {
+        let mut r = MonoResampler::new(44_100, 16_000);
+        let input: Vec<f32> = sine(44_100, 1.0).chunks(2).map(|f| f[0]).collect();
+        let mut out = Vec::new();
+        r.process(&input, &mut out);
+        r.finish(&mut out);
+        assert!((15_990..=16_010).contains(&out.len()), "{}", out.len());
     }
 
     #[test]

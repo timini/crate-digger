@@ -69,7 +69,7 @@ fn full_analysis_of_a_long_file() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("song.wav");
     Song::from_seed(7).render(100.0).write_wav(&path).unwrap();
-    let a = cd_analyzer::analyse(&path, &|_| {}).unwrap();
+    let a = cd_analyzer::analyse(&path, &[], &|_| {}).unwrap();
     assert_eq!(a.duration_ms, 100_000);
     assert_eq!(a.segments.len(), 3, "three 30 s windows for a long track");
     assert_eq!(a.segments[1].start_ms, 35_000);
@@ -90,7 +90,7 @@ fn short_files_use_one_segment() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("short.wav");
     Song::from_seed(2).render(20.0).write_wav(&path).unwrap();
-    let a = cd_analyzer::analyse(&path, &|_| {}).unwrap();
+    let a = cd_analyzer::analyse(&path, &[], &|_| {}).unwrap();
     assert_eq!(a.segments.len(), 1);
     assert_eq!(a.embeddings.len(), 2);
 }

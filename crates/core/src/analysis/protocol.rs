@@ -9,10 +9,24 @@ use super::FeatureVersion;
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case")]
 pub enum Request {
-    /// Full analysis of a file.
-    Analyse { path: String },
+    /// Full analysis of a file. Embeddings from the listed models are added
+    /// to the built-in baseline.
+    Analyse {
+        path: String,
+        #[serde(default)]
+        models: Vec<ModelRef>,
+    },
     /// Only a fingerprint, at a speed compensation (for pitched copies).
     Fingerprint { path: String, speed: f64 },
+}
+
+/// A downloaded model file the worker should use, with the checksum it
+/// must have. The worker refuses a file whose checksum differs.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ModelRef {
+    pub id: String,
+    pub path: String,
+    pub sha256: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

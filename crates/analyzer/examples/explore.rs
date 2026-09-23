@@ -7,7 +7,7 @@ fn main() {
         let s = Song::from_seed(seed);
         let p = dir.join(format!("s{seed}.wav"));
         s.render(100.0).write_wav(&p).unwrap();
-        let a = cd_analyzer::analyse(&p, &|_| {}).unwrap();
+        let a = cd_analyzer::analyse(&p, &[], &|_| {}).unwrap();
         let truth = format!("{} minor", NAMES[((9 + s.key) % 12) as usize]);
         println!(
             "seed {seed:2} bpm true {:5.1} got {:?} (conf {:.2}) | key true {truth:9} got {:?} | lufs {:?} | {} ms {} KB",

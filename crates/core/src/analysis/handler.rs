@@ -7,7 +7,7 @@ use std::sync::Arc;
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 
-use super::protocol::{Analysis, ErrorKind, FingerprintOut, Message, Request};
+use super::protocol::{Analysis, ErrorKind, FingerprintOut, Message, ModelRef, Request};
 use super::runner::{self, RunnerConfig, WorkerError};
 use super::{store, FeatureVersion};
 use crate::domain::{CandidateStatus, Stage};
@@ -27,7 +27,11 @@ pub trait Analyzer: Send + Sync {
 /// Runs each request in a separate worker process.
 pub struct ProcessAnalyzer {
     pub config: RunnerConfig,
+    /// The version whose embeddings drive ranking: the installed model's,
+    /// or the built-in baseline's.
     pub version: FeatureVersion,
+    /// Downloaded models to run alongside the baseline.
+    pub models: Vec<ModelRef>,
 }
 
 impl Analyzer for ProcessAnalyzer {
@@ -36,6 +40,7 @@ impl Analyzer for ProcessAnalyzer {
             &self.config,
             &Request::Analyse {
                 path: path.to_string_lossy().into_owned(),
+                models: self.models.clone(),
             },
         )? {
             Message::Analysis(a) => Ok(*a),
@@ -62,6 +67,42 @@ impl Analyzer for ProcessAnalyzer {
 
     fn version(&self) -> FeatureVersion {
         self.version.clone()
+    }
+}
+
+/// An analyzer that can be replaced while jobs are running, for example
+/// when the user switches models.
+pub struct SwitchableAnalyzer {
+    current: std::sync::RwLock<Arc<dyn Analyzer>>,
+}
+
+impl SwitchableAnalyzer {
+    pub fn new(initial: Arc<dyn Analyzer>) -> Self {
+        SwitchableAnalyzer {
+            current: std::sync::RwLock::new(initial),
+        }
+    }
+
+    pub fn set(&self, next: Arc<dyn Analyzer>) {
+        *self.current.write().unwrap() = next;
+    }
+
+    fn get(&self) -> Arc<dyn Analyzer> {
+        self.current.read().unwrap().clone()
+    }
+}
+
+impl Analyzer for SwitchableAnalyzer {
+    fn analyse(&self, path: &Path) -> Result<Analysis, WorkerError> {
+        self.get().analyse(path)
+    }
+
+    fn fingerprint(&self, path: &Path, speed: f64) -> Result<FingerprintOut, WorkerError> {
+        self.get().fingerprint(path, speed)
+    }
+
+    fn version(&self) -> FeatureVersion {
+        self.get().version()
     }
 }
 

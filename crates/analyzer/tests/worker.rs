@@ -33,7 +33,10 @@ fn with_fault(fault: &str) -> RunnerConfig {
 }
 
 fn analyse(path: &str) -> Request {
-    Request::Analyse { path: path.into() }
+    Request::Analyse {
+        path: path.into(),
+        models: vec![],
+    }
 }
 
 #[test]

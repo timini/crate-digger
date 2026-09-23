@@ -377,6 +377,15 @@ export interface AppSettings {
   data_dir: string
 }
 
+export interface ModelStatus {
+  id: string
+  licence: string
+  size_bytes: number
+  dims: number
+  installed: boolean
+  chosen: boolean
+}
+
 export const api = {
   appInfo: () => invoke<AppInfo>('app_info'),
   activity: (states: JobState[], limit = 200) => invoke<Activity>('activity', { states, limit }),
@@ -441,4 +450,9 @@ export const api = {
   conflictCount: () => invoke<number>('identity_conflict_count'),
   resolveConflict: (conflictId: string, relation: Relation) =>
     invoke<unknown>('identity_resolve', { conflictId, relation }),
+
+  models: () => invoke<ModelStatus[]>('models_list'),
+  downloadModel: (id: string) => invoke<void>('model_download', { id }),
+  downloadProgress: () => invoke<{ id: string; bytes: number } | null>('model_download_progress'),
+  chooseModel: (id: string | null) => invoke<void>('model_choose', { id }),
 }

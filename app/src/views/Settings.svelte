@@ -3,6 +3,7 @@
   import { open } from '@tauri-apps/plugin-dialog'
   import { api, type AppInfo, type AppSettings, type UserLimits } from '../lib/api'
   import Folders from '../components/Folders.svelte'
+  import Models from '../components/Models.svelte'
 
   let settings: AppSettings | null = $state(null)
   let info: AppInfo | null = $state(null)
@@ -91,6 +92,9 @@
       <input type="checkbox" checked={settings.close_to_tray} onchange={(e) => run(() => api.setCloseToTray(e.currentTarget.checked), 'Saved')} />
       Closing the window keeps background work running in the tray. Use Quit from the tray or app menu to stop it.
     </label>
+
+    <h3>Audio analysis</h3>
+    <Models />
 
     <h3>Connections</h3>
     <table class="integrations">

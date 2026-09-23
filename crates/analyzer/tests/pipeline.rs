@@ -57,6 +57,7 @@ fn imported_file_is_analysed_by_the_worker_process() {
     let analyzer = ProcessAnalyzer {
         config: RunnerConfig::new(PathBuf::from(env!("CARGO_BIN_EXE_cd-analyzer"))),
         version: version.clone(),
+        models: vec![],
     };
     let h: Arc<dyn Handler> = Arc::new(AnalysisHandler {
         analyzer: Arc::new(analyzer),

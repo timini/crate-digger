@@ -2,6 +2,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use cd_audio::{OutputConfig, Player};
+use cd_core::analysis::handler::SwitchableAnalyzer;
 use cd_core::jobs::scheduler::{staged_bytes, Limits, Scheduler};
 use cd_core::jobs::worker::{Handler, WorkerPool};
 use rusqlite::Connection;
@@ -19,6 +20,7 @@ pub struct AppState {
     pub session_id: String,
     /// Used when no archive folder has been chosen.
     pub default_archive_dir: PathBuf,
+    pub analyzer: Arc<SwitchableAnalyzer>,
 }
 
 pub fn archive_dir_setting(conn: &Connection) -> Option<PathBuf> {
@@ -40,6 +42,8 @@ impl AppState {
             tracing::info!(?recovery, "resumed background jobs");
         }
         let scheduler = Arc::new(Scheduler::new(Limits::default(), Arc::new(staged_bytes)));
+        let model = crate::models::chosen(&conn, data_dir);
+        let analyzer = Arc::new(SwitchableAnalyzer::new(Arc::new(crate::workers::analyzer(model))));
         Ok(AppState {
             data_dir: data_dir.to_path_buf(),
             db_path,
@@ -50,6 +54,7 @@ impl AppState {
             now_playing: Mutex::new(None),
             session_id: cd_core::util::new_id(),
             default_archive_dir,
+            analyzer,
         })
     }
 

@@ -7,7 +7,7 @@
 pub mod decode;
 pub mod fingerprint;
 pub mod player;
-mod resample;
+pub mod resample;
 pub mod synth;
 pub mod waveform;
 

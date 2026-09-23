@@ -5,7 +5,8 @@ use std::time::Duration;
 
 use cd_core::acquisition::{AcquireHandler, ValidateHandler};
 use cd_core::adapters::demo::{DemoAcquirer, DemoSource};
-use cd_core::analysis::handler::{AnalysisHandler, ProcessAnalyzer};
+use cd_core::analysis::handler::{AnalysisHandler, Analyzer, ProcessAnalyzer};
+use cd_core::analysis::protocol::ModelRef;
 use cd_core::analysis::runner::RunnerConfig;
 use cd_core::analysis::FeatureVersion;
 use cd_core::archive::ArchiveHandler;
@@ -19,26 +20,29 @@ use crate::state::AppState;
 /// Connector name for the only acquisition source in milestone 1.
 pub const DEMO_CONNECTOR: &str = "demo";
 
-/// The embedding version this build produces.
-pub fn analysis_version() -> FeatureVersion {
-    cd_analyzer::embed::version()
-}
-
 /// Analysis runs in a copy of this executable started with the worker flag,
-/// so a crash in decoding or analysis cannot take the app down.
-pub fn analyzer() -> ProcessAnalyzer {
+/// so a crash in decoding or analysis cannot take the app down. The chosen
+/// pretrained model, if installed, runs alongside the built-in baseline and
+/// its embeddings drive ranking.
+pub fn analyzer(model: Option<ModelRef>) -> ProcessAnalyzer {
     let exe = std::env::current_exe().unwrap_or_else(|_| "crate-digger".into());
     let mut config = RunnerConfig::new(exe);
     config.args = vec![cd_analyzer::WORKER_FLAG.to_string()];
+    let version = model
+        .as_ref()
+        .and_then(|m| cd_analyzer::models::info(&m.id))
+        .map(cd_analyzer::models::version)
+        .unwrap_or_else(cd_analyzer::embed::version);
     ProcessAnalyzer {
         config,
-        version: analysis_version(),
+        version,
+        models: model.into_iter().collect(),
     }
 }
 
 /// Queue analysis for tracks that lack the current version.
-pub fn plan_analysis(conn: &rusqlite::Connection) -> cd_core::Result<()> {
-    let p = cd_core::analysis::store::plan(conn, &analysis_version(), cd_core::util::now_ms())?;
+pub fn plan_analysis(conn: &rusqlite::Connection, version: &FeatureVersion) -> cd_core::Result<()> {
+    let p = cd_core::analysis::store::plan(conn, version, cd_core::util::now_ms())?;
     if p.queued > 0 || p.needs_audio > 0 {
         tracing::info!(queued = p.queued, needs_audio = p.needs_audio, "planned analysis");
     }
@@ -50,7 +54,10 @@ pub fn handlers(state: &AppState) -> Vec<Arc<dyn Handler>> {
     vec![
         Arc::new(ImportHandler {
             probe: probe.clone(),
-            after: Some(Arc::new(plan_analysis)),
+            after: Some({
+                let analyzer = state.analyzer.clone();
+                Arc::new(move |conn| plan_analysis(conn, &analyzer.version()))
+            }),
         }),
         Arc::new(DiscoverHandler {
             source: Arc::new(DemoSource),
@@ -64,7 +71,7 @@ pub fn handlers(state: &AppState) -> Vec<Arc<dyn Handler>> {
         }),
         Arc::new(ValidateHandler { probe }),
         {
-            let analyzer = Arc::new(analyzer());
+            let analyzer = state.analyzer.clone();
             let for_matching = analyzer.clone();
             Arc::new(AnalysisHandler {
                 analyzer,

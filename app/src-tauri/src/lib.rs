@@ -1,4 +1,5 @@
 mod commands;
+mod models;
 mod probe;
 mod state;
 mod tray;
@@ -31,7 +32,8 @@ pub fn run() {
             state.recover_archive();
             state.apply_limits();
             if let Ok(conn) = state.db() {
-                if let Err(e) = workers::plan_analysis(&conn) {
+                use cd_core::analysis::handler::Analyzer;
+                if let Err(e) = workers::plan_analysis(&conn, &state.analyzer.version()) {
                     tracing::warn!("could not plan analysis: {e}");
                 }
             }
@@ -105,6 +107,10 @@ pub fn run() {
             commands::identity::identity_conflicts,
             commands::identity::identity_conflict_count,
             commands::identity::identity_resolve,
+            commands::analysis::models_list,
+            commands::analysis::model_download,
+            commands::analysis::model_download_progress,
+            commands::analysis::model_choose,
             commands::review::demo_discovery_get,
             commands::review::demo_discovery_set,
         ])
