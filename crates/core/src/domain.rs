@@ -139,6 +139,17 @@ string_enum!(
     }
 );
 
+string_enum!(
+    /// Why a job is held. The scheduler lifts some holds by itself.
+    HoldCode {
+        User => "user",
+        Quit => "quit",
+        ConnectorAuth => "connector_auth",
+        DailyLimit => "daily_limit",
+        StorageLimit => "storage_limit",
+    }
+);
+
 impl JobState {
     /// States that need a reason attached.
     pub fn needs_reason(self) -> bool {

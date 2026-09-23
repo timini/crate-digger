@@ -7,7 +7,9 @@ pub mod adapters;
 pub mod db;
 pub mod domain;
 pub mod error;
+pub mod jobs;
 pub mod meta;
+pub mod pipeline;
 pub mod util;
 
 pub use error::{Error, Result};

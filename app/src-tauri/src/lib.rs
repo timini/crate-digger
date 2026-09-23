@@ -20,6 +20,7 @@ pub fn run() {
                 None => app.path().app_data_dir()?,
             };
             let state = state::AppState::open(&data_dir)?;
+            state.start_workers(Vec::new())?;
             app.manage(state);
 
             // CRATE_DIGGER_SMOKE=1: prove the app starts, then exit cleanly.
@@ -33,7 +34,19 @@ pub fn run() {
             }
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![commands::app_info])
-        .run(tauri::generate_context!())
-        .expect("error while running Crate Digger");
+        .invoke_handler(tauri::generate_handler![
+            commands::app_info,
+            commands::jobs::activity,
+            commands::jobs::jobs_pause_all,
+            commands::jobs::jobs_resume_all,
+            commands::jobs::job_cancel,
+            commands::jobs::job_retry,
+        ])
+        .build(tauri::generate_context!())
+        .expect("error while building Crate Digger")
+        .run(|app, event| {
+            if let tauri::RunEvent::Exit = event {
+                app.state::<state::AppState>().shutdown();
+            }
+        });
 }

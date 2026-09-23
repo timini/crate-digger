@@ -7,7 +7,10 @@ use rusqlite::Connection;
 use crate::Result;
 
 /// Ordered, append-only list of migrations. Never edit a released entry.
-pub const MIGRATIONS: &[(i64, &str, &str)] = &[(1, "init", include_str!("../migrations/0001_init.sql"))];
+pub const MIGRATIONS: &[(i64, &str, &str)] = &[
+    (1, "init", include_str!("../migrations/0001_init.sql")),
+    (2, "job_hold", include_str!("../migrations/0002_job_hold.sql")),
+];
 
 pub fn latest_version() -> i64 {
     MIGRATIONS.last().map(|m| m.0).unwrap_or(0)
