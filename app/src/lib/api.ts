@@ -506,6 +506,15 @@ export interface QueueHealth {
   holds: { code: string; message: string }[]
   availability: { samples: number; any_ready: number; above_threshold: number }
 }
+export interface ExportCheck {
+  name: string
+  tracks: { position: number; track_id: string; path: string }[]
+  problems: { kind: 'missing' | 'temporary'; position: number; track: string }[]
+}
+export const exporting = {
+  check: (id: string) => invoke<ExportCheck>('playlist_export_check', { id }),
+  write: (id: string, format: 'm3u8' | 'rekordbox', path: string) => invoke<number>('playlist_export', { id, format, path }),
+}
 export interface SourceRun {
   source: string
   input: string

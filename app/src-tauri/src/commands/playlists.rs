@@ -48,3 +48,27 @@ pub fn playlist_remove(state: State<'_, AppState>, id: String, position: usize) 
 pub fn playlist_move(state: State<'_, AppState>, id: String, from: usize, to: usize) -> CmdResult<()> {
     playlists::move_entry(&*state.db()?, &id, from, to).map_err(err)
 }
+
+/// What an export would contain, and any problems, before writing anything.
+#[tauri::command]
+pub fn playlist_export_check(state: State<'_, AppState>, id: String) -> CmdResult<cd_core::export::Prepared> {
+    cd_core::export::prepare(&*state.db()?, &id).map_err(err)
+}
+
+/// Write the playlist as `m3u8` or `rekordbox` to `path`. Returns the number of tracks written.
+#[tauri::command]
+pub fn playlist_export(
+    state: State<'_, AppState>,
+    id: String,
+    format: String,
+    path: String,
+) -> CmdResult<usize> {
+    let prepared = cd_core::export::prepare(&*state.db()?, &id).map_err(err)?;
+    let text = match format.as_str() {
+        "m3u8" => cd_core::export::m3u8(&prepared.tracks),
+        "rekordbox" => cd_core::export::rekordbox_xml(&prepared.name, &prepared.tracks),
+        _ => return Err("Choose M3U8 or Rekordbox XML.".into()),
+    };
+    std::fs::write(&path, text).map_err(|e| format!("Could not write {path}: {e}"))?;
+    Ok(prepared.tracks.len())
+}
