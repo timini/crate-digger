@@ -25,3 +25,21 @@ export function formatRelative(ms: number, now = Date.now()): string {
   if (abs < 2) return 'now'
   return diff < 0 ? `${text} ago` : `in ${text}`
 }
+
+const RATING_LABELS: Record<string, string> = {
+  thumbs_down: 'Thumbs down',
+  star1: '★',
+  star2: '★★',
+  star3: '★★★',
+}
+
+export function formatRating(kind: string | null | undefined): string {
+  return kind ? (RATING_LABELS[kind] ?? kind) : ''
+}
+
+/** "Artist - Title (Mix)" with graceful fallbacks. */
+export function trackLabel(t: { artist: string | null; title: string | null; mix: string | null }): string {
+  const title = t.title ?? 'Untitled'
+  const withMix = t.mix ? `${title} (${t.mix})` : title
+  return t.artist ? `${t.artist} - ${withMix}` : withMix
+}

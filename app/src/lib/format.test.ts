@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatBytes, formatDuration, formatRelative } from './format'
+import { formatBytes, formatDuration, formatRelative, trackLabel } from './format'
 
 describe('formatDuration', () => {
   it('formats minutes and seconds', () => {
@@ -27,5 +27,12 @@ describe('formatRelative', () => {
     expect(formatRelative(1000, 1000)).toBe('now')
     expect(formatRelative(0, 30_000)).toBe('30 s ago')
     expect(formatRelative(120_000, 0)).toBe('in 2 min')
+  })
+})
+
+describe('trackLabel', () => {
+  it('includes artist and mix when present', () => {
+    expect(trackLabel({ artist: 'A', title: 'B', mix: 'Dub' })).toBe('A - B (Dub)')
+    expect(trackLabel({ artist: null, title: null, mix: null })).toBe('Untitled')
   })
 })

@@ -2,6 +2,7 @@
   import { onMount } from 'svelte'
   import { api, type AppInfo } from './lib/api'
   import Activity from './views/Activity.svelte'
+  import Library from './views/Library.svelte'
 
   type View = 'review' | 'library' | 'playlists' | 'activity' | 'settings'
   const views: { id: View; label: string }[] = [
@@ -41,6 +42,8 @@
     {/if}
     {#if current === 'activity'}
       <Activity />
+    {:else if current === 'library'}
+      <Library />
     {:else}
       <p class="muted">{views.find((v) => v.id === current)?.label} view</p>
     {/if}

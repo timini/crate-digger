@@ -55,6 +55,156 @@ export interface Activity {
   connectors: ConnectorHealth[]
 }
 
+export type Availability = 'available' | 'missing' | 'corrupt'
+export type Field =
+  | 'artist'
+  | 'title'
+  | 'mix'
+  | 'label'
+  | 'release'
+  | 'track_number'
+  | 'year'
+  | 'genre'
+  | 'tempo'
+  | 'musical_key'
+export type RatingKind = 'thumbs_down' | 'star1' | 'star2' | 'star3'
+export type RatingFilter = 'unrated' | 'thumbs_down' | { min_stars: number }
+export type SortBy = 'artist' | 'title' | 'tempo' | 'key' | 'added' | 'rating'
+
+export interface LibraryQuery {
+  text?: string | null
+  artist?: string | null
+  title?: string | null
+  mix?: string | null
+  label?: string | null
+  rating?: RatingFilter | null
+  tempo_min?: number | null
+  tempo_max?: number | null
+  key?: string | null
+  availability?: Availability | null
+  playlist_id?: string | null
+  sort?: SortBy
+  descending?: boolean
+  limit?: number
+  offset?: number
+}
+
+export interface LibraryRow {
+  track_id: string
+  artist: string | null
+  title: string | null
+  mix: string | null
+  label: string | null
+  release: string | null
+  year: number | null
+  genre: string | null
+  tempo: number | null
+  musical_key: string | null
+  file_id: string | null
+  path: string | null
+  availability: Availability | null
+  availability_reason: string | null
+  duration_ms: number | null
+  format: string | null
+  file_count: number
+  rating: RatingKind | null
+  playlist_count: number
+  analysed: boolean
+  kept: boolean
+  added_at: number
+}
+
+export interface LibraryPage {
+  rows: LibraryRow[]
+  total: number
+}
+
+export interface LibraryRoot {
+  id: string
+  path: string
+  created_at: number
+  file_count: number
+}
+
+export interface TrackMeta {
+  artist: string | null
+  title: string | null
+  mix: string | null
+  label: string | null
+  release: string | null
+  track_number: string | null
+  year: number | null
+  genre: string | null
+  tempo: number | null
+  musical_key: string | null
+}
+
+export interface FieldProvenance {
+  field: Field
+  value: string | null
+  source: string
+  corrected: boolean
+}
+
+export interface FileRecord {
+  id: string
+  track_id: string
+  path: string
+  origin: 'imported' | 'staged' | 'archived'
+  size_bytes: number
+  duration_ms: number | null
+  format: string | null
+  sample_rate: number | null
+  channels: number | null
+  bitrate_kbps: number | null
+  availability: Availability
+  availability_reason: string | null
+  is_primary: boolean
+}
+
+export interface TrackDetail {
+  track_id: string
+  meta: TrackMeta
+  provenance: FieldProvenance[]
+  files: FileRecord[]
+  rating: RatingKind | null
+  kept: boolean
+  playlists: [string, string][]
+}
+
+export interface ImportSummary {
+  total: number
+  processed: number
+  added: number
+  updated: number
+  unchanged: number
+  duplicate_copies: number
+  relinked: number
+  corrupt: number
+  marked_missing: number
+  errors: string[]
+}
+
+export interface RelinkProposal {
+  file_id: string
+  track_id: string
+  old_path: string
+  new_path: string
+  method: 'content' | 'name_and_duration'
+}
+
+export interface DuplicatePair {
+  track_a: string
+  track_b: string
+  artist: string | null
+  title: string | null
+  mix: string | null
+  duration_a_ms: number | null
+  duration_b_ms: number | null
+  path_a: string | null
+  path_b: string | null
+}
+
 export const api = {
   appInfo: () => invoke<AppInfo>('app_info'),
   activity: (states: JobState[], limit = 200) => invoke<Activity>('activity', { states, limit }),
@@ -62,4 +212,20 @@ export const api = {
   resumeAll: () => invoke<number>('jobs_resume_all'),
   cancelJob: (id: string) => invoke<void>('job_cancel', { id }),
   retryJob: (id: string) => invoke<void>('job_retry', { id }),
+
+  roots: () => invoke<LibraryRoot[]>('library_roots'),
+  addRoot: (path: string) => invoke<string>('library_add_root', { path }),
+  removeRoot: (rootId: string) => invoke<void>('library_remove_root', { rootId }),
+  rescan: () => invoke<number>('library_rescan'),
+  search: (query: LibraryQuery) => invoke<LibraryPage>('library_search', { query }),
+  trackDetail: (trackId: string) => invoke<TrackDetail>('track_detail', { trackId }),
+  setField: (trackId: string, field: Field, value: string | null) =>
+    invoke<void>('track_set_field', { trackId, field, value }),
+  setPrimaryFile: (fileId: string) => invoke<void>('file_set_primary', { fileId }),
+  relinkFind: (folder: string) => invoke<RelinkProposal[]>('relink_find', { folder }),
+  relinkApply: (fileId: string, path: string) => invoke<void>('relink_apply', { fileId, path }),
+  checkFiles: () => invoke<ImportSummary>('library_check_files'),
+  duplicates: () => invoke<DuplicatePair[]>('duplicates_list'),
+  mergeDuplicates: (keep: string, remove: string) => invoke<void>('duplicates_merge', { keep, remove }),
+  dismissDuplicates: (a: string, b: string) => invoke<void>('duplicates_dismiss', { a, b }),
 }

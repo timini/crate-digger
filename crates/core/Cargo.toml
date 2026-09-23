@@ -21,5 +21,6 @@ uuid = { version = "1.26.1", features = ["v7", "serde"] }
 walkdir = "2.5.0"
 
 [dev-dependencies]
+cd-audio = { path = "../audio" }
 fail = { version = "0.5.1", features = ["failpoints"] }
 tempfile = "3.27.0"

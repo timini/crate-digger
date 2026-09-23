@@ -1,6 +1,7 @@
 //! Tauri commands. Each returns a plain string error the UI can show.
 
 pub mod jobs;
+pub mod library;
 
 use serde::Serialize;
 use tauri::State;
@@ -11,6 +12,22 @@ pub type CmdResult<T> = Result<T, String>;
 
 pub fn err(e: impl std::fmt::Display) -> String {
     e.to_string()
+}
+
+/// Run slow work (folder walks, decoding) off the UI thread on its own
+/// database connection, so it never holds the shared connection's lock.
+pub async fn blocking<T, F>(state: &AppState, f: F) -> CmdResult<T>
+where
+    T: Send + 'static,
+    F: FnOnce(&rusqlite::Connection) -> cd_core::Result<T> + Send + 'static,
+{
+    let path = state.db_path.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let conn = cd_core::db::open_existing(&path).map_err(err)?;
+        f(&conn).map_err(err)
+    })
+    .await
+    .map_err(err)?
 }
 
 #[derive(Serialize)]

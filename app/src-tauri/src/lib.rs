@@ -1,4 +1,5 @@
 mod commands;
+mod probe;
 mod state;
 
 use tauri::Manager;
@@ -20,7 +21,9 @@ pub fn run() {
                 None => app.path().app_data_dir()?,
             };
             let state = state::AppState::open(&data_dir)?;
-            state.start_workers(Vec::new())?;
+            state.start_workers(vec![std::sync::Arc::new(cd_core::library::ImportHandler {
+                probe: std::sync::Arc::new(probe::SymphoniaProbe),
+            })])?;
             app.manage(state);
 
             // CRATE_DIGGER_SMOKE=1: prove the app starts, then exit cleanly.
@@ -41,6 +44,20 @@ pub fn run() {
             commands::jobs::jobs_resume_all,
             commands::jobs::job_cancel,
             commands::jobs::job_retry,
+            commands::library::library_roots,
+            commands::library::library_add_root,
+            commands::library::library_remove_root,
+            commands::library::library_rescan,
+            commands::library::library_search,
+            commands::library::track_detail,
+            commands::library::track_set_field,
+            commands::library::file_set_primary,
+            commands::library::relink_find,
+            commands::library::relink_apply,
+            commands::library::library_check_files,
+            commands::library::duplicates_list,
+            commands::library::duplicates_merge,
+            commands::library::duplicates_dismiss,
         ])
         .build(tauri::generate_context!())
         .expect("error while building Crate Digger")

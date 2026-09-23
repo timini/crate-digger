@@ -8,6 +8,7 @@ pub mod db;
 pub mod domain;
 pub mod error;
 pub mod jobs;
+pub mod library;
 pub mod meta;
 pub mod pipeline;
 pub mod util;
