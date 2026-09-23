@@ -6,6 +6,7 @@
   import { player, playTrack, seekBy, seekTo } from '../lib/player.svelte'
   import AddToPlaylist from '../components/AddToPlaylist.svelte'
   import DiscoverFrom from '../components/DiscoverFrom.svelte'
+  import DownloadChoices from '../components/DownloadChoices.svelte'
   import YoutubeLinks from '../components/YoutubeLinks.svelte'
   import Waveform from '../components/Waveform.svelte'
 
@@ -199,6 +200,7 @@
   </header>
 
   {#if error}<p class="error">{error}</p>{/if}
+  <DownloadChoices />
 
   {#if card}
     <div

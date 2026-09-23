@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { connections, type Connections, type Seed } from '../lib/api'
+  import Soulseek from './Soulseek.svelte'
   let config: Connections | null = $state(null)
   let seeds: Seed[] = $state([])
   let message = $state('')
@@ -55,8 +56,10 @@
     <label class="check"><input type="checkbox" bind:checked={config.external_slskd} />Use an existing slskd instance</label>
     {#if config.external_slskd}
       <label>slskd endpoint <input bind:value={config.slskd_endpoint} /></label>
+      <label>slskd downloads folder <input bind:value={config.slskd_downloads_dir} placeholder="The folder your slskd saves finished downloads in" /></label>
     {/if}
     <button onclick={() => run(() => connections.save(config!))}>Save connections</button>
+    <Soulseek />
   </fieldset>
   <fieldset disabled={busy}>
     <legend>Credentials</legend>

@@ -471,9 +471,36 @@ export interface Connections {
   llm_model: string
   slskd_endpoint: string
   external_slskd: boolean
+  slskd_downloads_dir: string
   enabled: boolean
 }
 export interface Seed { kind: 'artist' | 'label' | 'dj' | 'track'; value: string }
+export interface SoulseekStatus {
+  external: boolean
+  state: { state: 'not_installed' | 'stopped' | 'starting' | 'running' | 'signed_out' | 'failed'; detail?: string }
+  installed: boolean
+  busy: boolean
+  downloaded_bytes: number
+  download_size: number | null
+  version: string
+  licence: string
+  source: string
+}
+export interface DownloadOption {
+  result: { result_id: string; filename: string; size_bytes: number; duration_ms: number | null; format: string | null; bitrate_kbps: number | null; username: string | null; free_slot: boolean | null; queue_length: number | null }
+  quality: 'lossless' | 'mp3_320' | 'other'
+  mix: 'compatible' | 'uncertain' | 'incompatible'
+  acceptable: boolean
+  notes: string[]
+}
+export interface DownloadChoice {
+  candidate_id: string
+  track_id: string
+  meta: TrackMeta
+  why: string
+  outcome: { ranked: DownloadOption[]; decision: { kind: 'auto' | 'choose' | 'nothing'; recommended?: number | null; why?: string } }
+  created_at: number
+}
 export interface SourceRun {
   source: string
   input: string
@@ -499,4 +526,11 @@ export const connections = {
   youtubePrefer: (trackId: string, videoId: string) => invoke<void>('youtube_prefer', { trackId, videoId }),
   youtubeReject: (trackId: string, videoId: string) => invoke<void>('youtube_reject', { trackId, videoId }),
   youtubeRefresh: (trackId: string) => invoke<void>('youtube_refresh', { trackId }),
+  soulseekStatus: () => invoke<SoulseekStatus>('soulseek_status'),
+  soulseekSetup: () => invoke<void>('soulseek_setup'),
+  downloadChoices: () => invoke<DownloadChoice[]>('download_choices'),
+  downloadChoose: (candidateId: string, resultId: string) => invoke<void>('download_choose', { candidateId, resultId }),
+  downloadDecline: (candidateId: string) => invoke<void>('download_decline', { candidateId }),
+  unattendedGet: () => invoke<boolean>('unattended_downloads_get'),
+  unattendedSet: (enabled: boolean) => invoke<void>('unattended_downloads_set', { enabled }),
 }

@@ -10,6 +10,8 @@ pub struct Connections {
     pub llm_model: String,
     pub slskd_endpoint: String,
     pub external_slskd: bool,
+    /// Where an external slskd saves finished downloads.
+    pub slskd_downloads_dir: String,
     pub enabled: bool,
 }
 impl Default for Connections {
@@ -20,6 +22,7 @@ impl Default for Connections {
             llm_model: String::new(),
             slskd_endpoint: "http://127.0.0.1:5030".into(),
             external_slskd: false,
+            slskd_downloads_dir: String::new(),
             enabled: false,
         }
     }

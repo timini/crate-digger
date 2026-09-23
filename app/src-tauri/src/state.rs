@@ -25,6 +25,7 @@ pub struct AppState {
     pub secrets: Arc<dyn cd_connectors::credentials::SecretStore>,
     /// Non-secret connection settings, shared with the live discovery source.
     pub connections: Arc<RwLock<cd_connectors::config::Connections>>,
+    pub soulseek: Arc<crate::soulseek::Soulseek>,
 }
 
 pub fn archive_dir_setting(conn: &Connection) -> Option<PathBuf> {
@@ -52,6 +53,31 @@ impl AppState {
             cd_connectors::config::Connections::default(),
         )
         .unwrap_or_default();
+        let connections = Arc::new(RwLock::new(connections));
+        let secrets: Arc<dyn cd_connectors::credentials::SecretStore> =
+            Arc::new(cd_connectors::credentials::Keychain);
+        let staging: Arc<dyn Fn() -> PathBuf + Send + Sync> = {
+            let db_path = db_path.clone();
+            let default = data_dir.join("staging");
+            Arc::new(move || {
+                cd_core::db::open(&db_path)
+                    .ok()
+                    .and_then(|c| {
+                        cd_core::settings::get::<String>(&c, cd_core::settings::keys::STAGING_DIR)
+                            .ok()
+                            .flatten()
+                    })
+                    .map(PathBuf::from)
+                    .unwrap_or_else(|| default.clone())
+            })
+        };
+        let soulseek = Arc::new(crate::soulseek::Soulseek::new(
+            data_dir.join("slskd"),
+            connections.clone(),
+            secrets.clone(),
+            staging,
+            db_path.clone(),
+        ));
         let model = crate::models::chosen(&conn, data_dir);
         let analyzer = Arc::new(SwitchableAnalyzer::new(Arc::new(crate::workers::analyzer(model))));
         Ok(AppState {
@@ -65,8 +91,9 @@ impl AppState {
             session_id: cd_core::util::new_id(),
             default_archive_dir,
             analyzer,
-            secrets: Arc::new(cd_connectors::credentials::Keychain),
-            connections: Arc::new(RwLock::new(connections)),
+            secrets,
+            connections,
+            soulseek,
         })
     }
 
@@ -187,6 +214,7 @@ impl AppState {
         if let Some(p) = self.player.lock().unwrap().take() {
             p.stop();
         }
+        self.soulseek.stop();
         self.scheduler.stop_accepting();
         if let Some(pool) = self.pool.lock().unwrap().take() {
             pool.stop();

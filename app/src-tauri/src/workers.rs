@@ -117,9 +117,24 @@ pub fn handlers(state: &AppState) -> Vec<Arc<dyn Handler>> {
         Arc::new(cd_core::youtube::YoutubeHandler {
             lookup: Arc::new(youtube(state)),
         }),
-        // Soulseek joins in #12; until then live candidates wait with a reason.
         Arc::new(AcquireHandler {
-            acquirers: vec![Arc::new(DemoAcquirer::default())],
+            acquirers: vec![
+                Arc::new(DemoAcquirer::default()),
+                Arc::new(cd_connectors::slskd::SoulseekAcquirer {
+                    locate: state.soulseek.clone(),
+                    model: {
+                        let config = state.connections.clone();
+                        let secrets = state.secrets.clone();
+                        Arc::new(move || {
+                            let c = config.read().unwrap().clone();
+                            if c.llm_model.trim().is_empty() {
+                                return None;
+                            }
+                            cd_connectors::llm::client(&c, &*secrets, Arc::new(Http::default())).ok()
+                        })
+                    },
+                }),
+            ],
             staging_root: state.staging_dir(),
             probe: probe.clone(),
             poll: Duration::from_millis(500),

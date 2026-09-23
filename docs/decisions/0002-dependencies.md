@@ -23,9 +23,19 @@ Status: recorded for milestones 1 and 2. The code licence for Crate Digger itsel
 | keyring 3.6.3 | OS credential store (Keychain, Windows Credential Manager, Secret Service) | MIT OR Apache-2.0 |
 | url 2 | Endpoint validation in connectors | MIT OR Apache-2.0 |
 | serde_json `preserve_order` (adds indexmap) | Keeps schema property order for constrained model output | MIT OR Apache-2.0 |
+| zip 8 (deflate only) | Unpacking the pinned slskd release | MIT |
+| uuid `v4` | Random slskd API key and search ids | MIT OR Apache-2.0 |
 | walkdir, uuid, serde, unicode-normalization | Utilities | MIT OR Apache-2.0 (walkdir also Unlicense) |
 
 Test-only: fail (Apache-2.0), tempfile, vitest and testing-library (MIT).
+
+## Separate programs
+
+| Program | Purpose | Licence | How it is used |
+| --- | --- | --- | --- |
+| slskd 0.26.0 (https://github.com/slskd/slskd) | Soulseek client | AGPL-3.0 | Not linked or bundled. Downloaded on first use from its GitHub release for the user's platform, checked against a pinned SHA-256 (`crates/connectors/src/slskd/install.rs`), unpacked into the app's data folder unchanged and run as a separate process controlled over its HTTP API. The app links to its source in Settings. Users may run their own slskd instead. |
+
+Running an unmodified AGPL program as a separate process and talking to it over HTTP does not make Crate Digger a derivative work, but if a future build bundles or modifies slskd, its source must be offered under AGPL-3.0.
 
 ## Points to settle before release
 

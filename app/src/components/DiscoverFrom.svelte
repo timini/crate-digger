@@ -10,7 +10,7 @@
 
   async function refresh() {
     try {
-      runs = await connections.runs()
+      runs = (await connections.runs()) ?? []
     } catch (e) {
       error = String(e)
     }

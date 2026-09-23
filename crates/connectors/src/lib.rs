@@ -5,6 +5,7 @@ pub mod discovery;
 pub mod http;
 pub mod llm;
 pub mod probe;
+pub mod slskd;
 #[cfg(test)]
 pub(crate) mod testing;
 pub mod youtube;
