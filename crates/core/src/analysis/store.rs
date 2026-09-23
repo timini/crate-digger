@@ -152,8 +152,8 @@ pub fn index_fingerprint(conn: &Connection, fingerprint_id: &str, data: &[u8]) -
     )?;
     let mut stmt =
         conn.prepare_cached("INSERT INTO fingerprint_key (key, fingerprint_id) VALUES (?1, ?2)")?;
-    for chunk in data.chunks_exact(4).step_by(3) {
-        let v = u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]);
+    for chunk in data.as_chunks::<4>().0.iter().step_by(3) {
+        let v = u32::from_le_bytes(*chunk);
         if v != 0 {
             stmt.execute(params![v as i64, fingerprint_id])?;
         }
@@ -232,8 +232,10 @@ pub type StoredFingerprint = (String, Vec<u32>, i64);
 
 fn decode_fp(algorithm: String, data: Vec<u8>, duration: i64) -> StoredFingerprint {
     let values = data
-        .chunks_exact(4)
-        .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .map(|c| u32::from_le_bytes(*c))
         .collect();
     (algorithm, values, duration)
 }

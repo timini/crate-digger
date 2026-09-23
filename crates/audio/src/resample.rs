@@ -128,7 +128,7 @@ impl MonoResampler {
     }
 
     fn fold(&mut self, out: &mut Vec<f32>) {
-        out.extend(self.out.chunks_exact(2).map(|f| f[0]));
+        out.extend(self.out.as_chunks::<2>().0.iter().map(|f| f[0]));
         self.out.clear();
     }
 
