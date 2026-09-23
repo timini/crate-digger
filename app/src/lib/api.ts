@@ -219,6 +219,29 @@ export interface NowPlaying {
   output?: string
 }
 
+export interface Playlist {
+  id: string
+  name: string
+  track_count: number
+  duration_ms: number
+  created_at: number
+  updated_at: number
+}
+
+export interface PlaylistEntry {
+  position: number
+  track_id: string
+  artist: string | null
+  title: string | null
+  mix: string | null
+  tempo: number | null
+  musical_key: string | null
+  duration_ms: number | null
+  path: string | null
+  availability: Availability | null
+  rating: RatingKind | null
+}
+
 export const api = {
   appInfo: () => invoke<AppInfo>('app_info'),
   activity: (states: JobState[], limit = 200) => invoke<Activity>('activity', { states, limit }),
@@ -250,4 +273,13 @@ export const api = {
   setVolume: (volume: number) => invoke<void>('player_set_volume', { volume }),
   playerStatus: () => invoke<NowPlaying>('player_status'),
   waveform: (trackId: string) => invoke<number[] | null>('track_waveform', { trackId }),
+
+  playlists: () => invoke<Playlist[]>('playlists_list'),
+  createPlaylist: (name: string) => invoke<string>('playlist_create', { name }),
+  renamePlaylist: (id: string, name: string) => invoke<void>('playlist_rename', { id, name }),
+  deletePlaylist: (id: string) => invoke<void>('playlist_delete', { id }),
+  playlistEntries: (id: string) => invoke<PlaylistEntry[]>('playlist_entries', { id }),
+  addToPlaylist: (id: string, trackIds: string[], at?: number) => invoke<void>('playlist_add', { id, trackIds, at }),
+  removeFromPlaylist: (id: string, position: number) => invoke<void>('playlist_remove', { id, position }),
+  movePlaylistEntry: (id: string, from: number, to: number) => invoke<void>('playlist_move', { id, from, to }),
 }

@@ -3,6 +3,7 @@
   import { revealItemInDir } from '@tauri-apps/plugin-opener'
   import { api, type Field, type RelinkProposal, type TrackDetail } from '../lib/api'
   import { formatBytes, formatDuration, formatRating } from '../lib/format'
+  import AddToPlaylist from './AddToPlaylist.svelte'
 
   let { trackId, onclose, onchange }: { trackId: string; onclose: () => void; onchange: () => void } = $props()
 
@@ -107,6 +108,10 @@
       {#if detail.playlists.length}· In {detail.playlists.map((p) => p[1]).join(', ')}{/if}
     </p>
 
+    {#key trackId}
+      <AddToPlaylist trackIds={[trackId]} onadded={() => (load(trackId), onchange())} />
+    {/key}
+
     <form onsubmit={(e) => e.preventDefault()}>
       {#each fields as f (f.field)}
         <label>
@@ -174,6 +179,7 @@
     align-items: center;
   }
   form {
+    margin-top: 12px;
     display: grid;
     gap: 6px;
   }

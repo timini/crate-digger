@@ -65,6 +65,14 @@ pub fn run() {
             commands::player::player_set_volume,
             commands::player::player_status,
             commands::player::track_waveform,
+            commands::playlists::playlists_list,
+            commands::playlists::playlist_create,
+            commands::playlists::playlist_rename,
+            commands::playlists::playlist_delete,
+            commands::playlists::playlist_entries,
+            commands::playlists::playlist_add,
+            commands::playlists::playlist_remove,
+            commands::playlists::playlist_move,
         ])
         .build(tauri::generate_context!())
         .expect("error while building Crate Digger")

@@ -11,6 +11,7 @@ pub mod jobs;
 pub mod library;
 pub mod meta;
 pub mod pipeline;
+pub mod playlists;
 pub mod util;
 
 pub use error::{Error, Result};

@@ -4,6 +4,7 @@
   import Activity from './views/Activity.svelte'
   import Library from './views/Library.svelte'
   import PlayerBar from './components/PlayerBar.svelte'
+  import Playlists from './views/Playlists.svelte'
 
   type View = 'review' | 'library' | 'playlists' | 'activity' | 'settings'
   const views: { id: View; label: string }[] = [
@@ -46,6 +47,8 @@
       <Activity />
     {:else if current === 'library'}
       <Library />
+    {:else if current === 'playlists'}
+      <Playlists />
     {:else}
       <p class="muted">{views.find((v) => v.id === current)?.label} view</p>
     {/if}

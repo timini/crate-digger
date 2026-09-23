@@ -79,17 +79,7 @@ pub fn track_detail(state: State<'_, AppState>, track_id: String) -> CmdResult<T
             |_| Ok(()),
         )
         .is_ok();
-    let mut stmt = conn
-        .prepare(
-            "SELECT DISTINCT p.id, p.name FROM playlist p JOIN playlist_entry e ON e.playlist_id = p.id
-             WHERE e.track_id = ?1 ORDER BY p.name",
-        )
-        .map_err(err)?;
-    let playlists = stmt
-        .query_map([&track_id], |r| Ok((r.get(0)?, r.get(1)?)))
-        .map_err(err)?
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(err)?;
+    let playlists = cd_core::playlists::containing(&conn, &track_id).map_err(err)?;
     Ok(TrackDetail {
         meta: meta::effective(&conn, &track_id).map_err(err)?,
         provenance: meta::provenance(&conn, &track_id).map_err(err)?,
