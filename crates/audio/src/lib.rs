@@ -5,5 +5,9 @@
 //! listed in [`SUPPORTED_FORMATS`]; see `docs/formats.md`.
 
 pub mod decode;
+pub mod player;
+mod resample;
+pub mod waveform;
 
 pub use decode::{probe, AudioError, AudioInfo, Decoder, SUPPORTED_FORMATS};
+pub use player::{OutputConfig, PlayState, Player, PlayerStatus};

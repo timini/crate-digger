@@ -3,6 +3,7 @@
   import { api, type AppInfo } from './lib/api'
   import Activity from './views/Activity.svelte'
   import Library from './views/Library.svelte'
+  import PlayerBar from './components/PlayerBar.svelte'
 
   type View = 'review' | 'library' | 'playlists' | 'activity' | 'settings'
   const views: { id: View; label: string }[] = [
@@ -26,6 +27,7 @@
   })
 </script>
 
+<div class="app">
 <div class="shell">
   <nav>
     <h1>Crate Digger</h1>
@@ -48,4 +50,6 @@
       <p class="muted">{views.find((v) => v.id === current)?.label} view</p>
     {/if}
   </main>
+</div>
+<PlayerBar />
 </div>

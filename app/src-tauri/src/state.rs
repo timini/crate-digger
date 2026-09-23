@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard};
 
+use cd_audio::{OutputConfig, Player};
 use cd_core::jobs::scheduler::{staged_bytes, Limits, Scheduler};
 use cd_core::jobs::worker::{Handler, WorkerPool};
 use rusqlite::Connection;
@@ -11,6 +12,9 @@ pub struct AppState {
     db: Mutex<Connection>,
     pub scheduler: Arc<Scheduler>,
     pool: Mutex<Option<WorkerPool>>,
+    player: Mutex<Option<Arc<Player>>>,
+    /// Track the player has loaded, for the UI.
+    pub now_playing: Mutex<Option<String>>,
 }
 
 impl AppState {
@@ -31,7 +35,25 @@ impl AppState {
             db: Mutex::new(conn),
             scheduler,
             pool: Mutex::new(None),
+            player: Mutex::new(None),
+            now_playing: Mutex::new(None),
         })
+    }
+
+    /// The audio player, started on first use so a missing output device
+    /// never stops the app from opening. Retries until a device is found.
+    pub fn player(&self) -> Result<Arc<Player>, String> {
+        let mut slot = self.player.lock().unwrap();
+        if let Some(p) = &*slot {
+            return Ok(p.clone());
+        }
+        let p = Arc::new(Player::start(OutputConfig::Device)?);
+        *slot = Some(p.clone());
+        Ok(p)
+    }
+
+    pub fn player_if_started(&self) -> Option<Arc<Player>> {
+        self.player.lock().unwrap().clone()
     }
 
     pub fn db(&self) -> Result<MutexGuard<'_, Connection>, String> {
@@ -55,6 +77,9 @@ impl AppState {
     /// Explicit Quit: stop handing out work, let workers stop at their next
     /// checkpoint, then record running jobs as resumable.
     pub fn shutdown(&self) {
+        if let Some(p) = self.player.lock().unwrap().take() {
+            p.stop();
+        }
         self.scheduler.stop_accepting();
         if let Some(pool) = self.pool.lock().unwrap().take() {
             pool.stop();

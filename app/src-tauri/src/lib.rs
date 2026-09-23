@@ -58,6 +58,13 @@ pub fn run() {
             commands::library::duplicates_list,
             commands::library::duplicates_merge,
             commands::library::duplicates_dismiss,
+            commands::player::player_play_track,
+            commands::player::player_toggle,
+            commands::player::player_pause,
+            commands::player::player_seek,
+            commands::player::player_set_volume,
+            commands::player::player_status,
+            commands::player::track_waveform,
         ])
         .build(tauri::generate_context!())
         .expect("error while building Crate Digger")

@@ -61,10 +61,16 @@ select {
   padding: 6px 8px;
 }
 
+.app {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  height: 100vh;
+}
+
 .shell {
   display: grid;
   grid-template-columns: 200px 1fr;
-  height: 100vh;
+  min-height: 0;
 }
 
 nav {

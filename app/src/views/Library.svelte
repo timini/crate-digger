@@ -2,7 +2,8 @@
   import { onDestroy, onMount } from 'svelte'
   import { open } from '@tauri-apps/plugin-dialog'
   import { api, type Availability, type LibraryQuery, type LibraryRoot, type LibraryRow, type RatingFilter, type SortBy } from '../lib/api'
-  import { formatDuration, formatRating } from '../lib/format'
+  import { formatDuration, formatRating, trackLabel } from '../lib/format'
+  import { playTrack } from '../lib/player.svelte'
   import TrackPanel from '../components/TrackPanel.svelte'
   import Duplicates from '../components/Duplicates.svelte'
 
@@ -118,6 +119,10 @@
   })
   onDestroy(() => clearInterval(timer))
 
+  function play(row: LibraryRow) {
+    playTrack(row.track_id, trackLabel(row))
+  }
+
   function onKey(e: KeyboardEvent) {
     const target = e.target as HTMLElement
     if (target.tagName === 'INPUT' || target.tagName === 'SELECT' || target.tagName === 'TEXTAREA') return
@@ -131,6 +136,9 @@
       selected = rows[next].track_id
     } else if (e.key === 'Escape') {
       selected = null
+    } else if (e.key === 'Enter' && selected) {
+      const row = rows.find((r) => r.track_id === selected)
+      if (row) play(row)
     }
   }
 </script>
@@ -167,7 +175,7 @@
       </label>
       <label>BPM <input class="num" type="number" placeholder="min" bind:value={tempoMin} oninput={scheduleLoad} />
         to <input class="num" type="number" placeholder="max" bind:value={tempoMax} oninput={scheduleLoad} /></label>
-      <label>Key <input class="num" placeholder="8A" bind:value={key} oninput={scheduleLoad} /></label>
+      <label>Key <input class="num" placeholder="any" bind:value={key} oninput={scheduleLoad} /></label>
       <label>Files
         <select bind:value={availability} onchange={load}>
           <option value="">All</option>
@@ -209,6 +217,7 @@
               class:selected={selected === row.track_id}
               class:unavailable={row.availability !== 'available'}
               onclick={() => (selected = row.track_id)}
+              ondblclick={() => play(row)}
             >
               <td>{row.artist ?? ''}</td>
               <td>{row.title ?? row.path?.split(/[\\/]/).pop() ?? ''}</td>
@@ -302,6 +311,10 @@
   }
   th:nth-child(8) {
     width: 80px;
+  }
+  th {
+    color: var(--muted);
+    font-weight: 600;
   }
   .th {
     background: none;

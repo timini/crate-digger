@@ -205,6 +205,20 @@ export interface DuplicatePair {
   path_b: string | null
 }
 
+export type PlayState = 'idle' | 'playing' | 'paused' | 'ended' | 'error'
+
+export interface NowPlaying {
+  track_id: string | null
+  state?: PlayState
+  path?: string | null
+  position_ms?: number
+  duration_ms?: number | null
+  volume?: number
+  error?: string | null
+  underruns?: number
+  output?: string
+}
+
 export const api = {
   appInfo: () => invoke<AppInfo>('app_info'),
   activity: (states: JobState[], limit = 200) => invoke<Activity>('activity', { states, limit }),
@@ -228,4 +242,12 @@ export const api = {
   duplicates: () => invoke<DuplicatePair[]>('duplicates_list'),
   mergeDuplicates: (keep: string, remove: string) => invoke<void>('duplicates_merge', { keep, remove }),
   dismissDuplicates: (a: string, b: string) => invoke<void>('duplicates_dismiss', { a, b }),
+
+  playTrack: (trackId: string, startMs?: number) => invoke<void>('player_play_track', { trackId, startMs }),
+  togglePlay: () => invoke<void>('player_toggle'),
+  pause: () => invoke<void>('player_pause'),
+  seek: (ms: number) => invoke<void>('player_seek', { ms: Math.max(0, Math.round(ms)) }),
+  setVolume: (volume: number) => invoke<void>('player_set_volume', { volume }),
+  playerStatus: () => invoke<NowPlaying>('player_status'),
+  waveform: (trackId: string) => invoke<number[] | null>('track_waveform', { trackId }),
 }
