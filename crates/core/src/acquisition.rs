@@ -212,46 +212,7 @@ impl Handler for ValidateHandler {
                 params![file.id, decoded],
             )
             .map_err(Error::from)?;
-        pipeline::transition(ctx.conn, &payload.candidate_id, Stage::Analysing, ctx.now())?;
-        crate::jobs::enqueue(
-            ctx.conn,
-            &NewJob::new(
-                kinds::ANALYSE,
-                format!("analyse:{}", file.id),
-                serde_json::to_value(&payload).map_err(Error::from)?,
-            ),
-            ctx.now(),
-        )?;
-        Ok(())
-    }
-}
-
-/// Milestone 1 analysis: the waveform overview. Fingerprints, embeddings,
-/// tempo and key arrive with the analysis worker (#9).
-pub struct AnalyseHandler {
-    pub probe: Arc<dyn AudioProbe>,
-}
-
-impl Handler for AnalyseHandler {
-    fn kind(&self) -> &'static str {
-        kinds::ANALYSE
-    }
-
-    fn run(&self, ctx: &mut JobCtx<'_>) -> std::result::Result<(), JobError> {
-        let payload: FilePayload = ctx.payload()?;
-        let file = library::file(ctx.conn, &payload.file_id)?;
-        match self.probe.waveform(std::path::Path::new(&file.path), 800) {
-            Ok(peaks) => {
-                ctx.conn
-                    .execute(
-                        "UPDATE audio_file SET waveform = ?2 WHERE id = ?1",
-                        params![file.id, peaks],
-                    )
-                    .map_err(Error::from)?;
-            }
-            Err(e) => tracing::warn!("waveform failed for {}: {e}", file.path),
-        }
-        crate::review::mark_ready(ctx.conn, &payload.candidate_id, ctx.now())?;
+        crate::analysis::handler::queue_for_candidate(ctx.conn, &payload.candidate_id, &file.id, ctx.now())?;
         Ok(())
     }
 }

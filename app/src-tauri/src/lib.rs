@@ -30,6 +30,11 @@ pub fn run() {
             let state = state::AppState::open(&data_dir, default_archive)?;
             state.recover_archive();
             state.apply_limits();
+            if let Ok(conn) = state.db() {
+                if let Err(e) = workers::plan_analysis(&conn) {
+                    tracing::warn!("could not plan analysis: {e}");
+                }
+            }
             let handlers = workers::handlers(&state);
             state.start_workers(handlers)?;
             app.manage(state);

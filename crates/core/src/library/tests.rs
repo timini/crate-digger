@@ -470,6 +470,7 @@ fn import_job_runs_through_the_scheduler() {
     let s = Scheduler::new(Limits::default(), Arc::new(staged_bytes));
     let h: Arc<dyn Handler> = Arc::new(ImportHandler {
         probe: Arc::new(RealProbe),
+        after: None,
     });
     let handlers = HashMap::from([(h.kind(), h)]);
     assert!(run_one(

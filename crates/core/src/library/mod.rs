@@ -865,8 +865,12 @@ struct ImportPayload {
     root_id: String,
 }
 
+/// A step to run after a successful scan, for example queueing analysis.
+pub type AfterImport = Arc<dyn Fn(&Connection) -> Result<()> + Send + Sync>;
+
 pub struct ImportHandler {
     pub probe: Arc<dyn AudioProbe>,
+    pub after: Option<AfterImport>,
 }
 
 impl Handler for ImportHandler {
@@ -887,6 +891,11 @@ impl Handler for ImportHandler {
         match result {
             Ok(summary) => {
                 tracing::info!(?summary, "import finished");
+                if let Some(after) = &self.after {
+                    if let Err(e) = after(conn) {
+                        tracing::warn!("after-import step failed: {e}");
+                    }
+                }
                 ctx.save_checkpoint(&summary)
             }
             Err(ImportError::Stopped(e)) => Err(e),

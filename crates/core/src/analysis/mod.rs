@@ -1,8 +1,10 @@
 //! Audio analysis: versioned features, the worker protocol and the process
 //! runner that keeps analysis failures away from the app.
 
+pub mod handler;
 pub mod protocol;
 pub mod runner;
+pub mod store;
 
 use serde::{Deserialize, Serialize};
 
@@ -90,6 +92,9 @@ impl Embedding {
         Ok((dot / (na.sqrt() * nb.sqrt())) as f32)
     }
 }
+
+#[cfg(test)]
+mod store_tests;
 
 #[cfg(test)]
 mod tests {

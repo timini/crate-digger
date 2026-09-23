@@ -24,6 +24,8 @@ use cd_core::analysis::protocol::{
 
 /// Length of each analysed segment.
 pub const SEGMENT_MS: u64 = 30_000;
+/// Width of the stored waveform overview.
+pub const WAVEFORM_BINS: usize = 800;
 
 /// Peak resident memory of this process in KiB.
 pub fn peak_rss_kb() -> u64 {
@@ -117,6 +119,7 @@ pub fn analyse(path: &Path, progress: &dyn Fn(u64)) -> Result<Analysis, AudioErr
     let mut mono = Vec::new();
     let mut buf = Vec::new();
     let mut last_report = 0u64;
+    let (mut blocks, mut block_peak, mut in_block) = (Vec::new(), 0f32, 0usize);
 
     while dec.next_chunk(&mut buf)? {
         let ch = dec.info.channels.max(1) as usize;
@@ -130,12 +133,23 @@ pub fn analyse(path: &Path, progress: &dyn Fn(u64)) -> Result<Analysis, AudioErr
         clipped += buf.iter().filter(|s| s.abs() >= 0.999).count() as u64;
         mono.clear();
         mono.extend(buf.chunks_exact(ch).map(|f| f.iter().sum::<f32>() / ch as f32));
+        for frame in buf.chunks_exact(ch) {
+            block_peak = frame.iter().fold(block_peak, |m, s| m.max(s.abs()));
+            in_block += 1;
+            if in_block == cd_audio::waveform::BLOCK {
+                blocks.push(block_peak);
+                (block_peak, in_block) = (0.0, 0);
+            }
+        }
         frames.push(&mono);
         let pos = dec.position_ms();
         if pos >= last_report + 1000 {
             last_report = pos;
             progress(pos);
         }
+    }
+    if in_block > 0 {
+        blocks.push(block_peak);
     }
     let frame_count = samples / channels as u64;
     if frame_count == 0 {
@@ -195,6 +209,7 @@ pub fn analyse(path: &Path, progress: &dyn Fn(u64)) -> Result<Analysis, AudioErr
         },
         segments: segs,
         embeddings,
+        waveform: cd_audio::waveform::bin_peaks(&blocks, WAVEFORM_BINS),
         stats: Stats {
             wall_ms: started.elapsed().as_millis() as u64,
             peak_rss_kb: peak_rss_kb(),

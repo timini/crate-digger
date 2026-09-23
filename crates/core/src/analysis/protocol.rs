@@ -102,5 +102,7 @@ pub struct Analysis {
     pub quality: Quality,
     pub segments: Vec<Segment>,
     pub embeddings: Vec<EmbeddingOut>,
+    /// Peak overview for display, 0..=255 per bin.
+    pub waveform: Vec<u8>,
     pub stats: Stats,
 }

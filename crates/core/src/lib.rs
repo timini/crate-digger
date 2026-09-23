@@ -30,3 +30,7 @@ pub use error::{Error, Result};
 #[cfg(test)]
 #[path = "../test_support/real_probe.rs"]
 pub(crate) mod real_probe;
+
+#[cfg(test)]
+#[path = "../test_support/fake_analyzer.rs"]
+pub(crate) mod fake_analyzer;

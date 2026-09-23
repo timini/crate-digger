@@ -509,6 +509,7 @@ dependencies = [
  "ebur128",
  "libc",
  "realfft",
+ "rusqlite",
  "serde",
  "serde_json",
  "tempfile",
