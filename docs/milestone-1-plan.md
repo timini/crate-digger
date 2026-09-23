@@ -94,3 +94,78 @@ docs/formats.md            advertised codecs and their decode tests
 
 - Windows and Linux launch is proven by CI builds, not by me running them.
 - Playback smoothness is measured on this Mac; reference hardware is chosen in #21.
+
+## Acceptance status
+
+Status after implementation on branch `milestone-1`. "Test" names are Rust tests (`cargo test --workspace`) unless marked as frontend (`pnpm test` in `app/`).
+
+### #1 Foundation
+
+| Criterion | Evidence | Status |
+| --- | --- | --- |
+| App launches on all three desktop OSes from CI builds | CI `build` job builds unsigned bundles for macOS arm64 and x64, Windows x64 and Ubuntu 22.04, then runs `scripts/smoke-launch.sh`. Verified locally on macOS arm64. | Pending first CI run |
+| Migrations are versioned and run forwards on empty and existing databases | `db::tests::migrates_empty_database_to_latest`, `migrates_existing_database_forwards_from_every_version`, `migrating_twice_is_a_no_op`, `refuses_database_from_newer_app` | Done |
+| Paths are stored on file records, never used as track identity | `db::tests::track_table_has_no_path_column`; relink tests keep the track ID when the path changes | Done |
+| A user correction survives a later automatic metadata update | `meta::tests::user_correction_survives_later_automatic_update`, `library::tests::user_correction_survives_rescan_with_new_tags` | Done |
+| CI runs without network access | Tests run with `--offline`; on Linux inside `unshare --net`. Adapters are fakes. | Pending first CI run |
+
+### #2 Durable jobs
+
+| Criterion | Evidence | Status |
+| --- | --- | --- |
+| Restart restores jobs and preferences without duplicate actions | `jobs::tests::quit_parks_running_jobs_and_start_resumes_them`, `review::tests::restart_mid_pipeline_resumes_without_repeating_downloads`, `review::tests::rating_is_persisted_and_moves_the_card_out_of_the_queue` | Done |
+| Crash injection at transfer completion, analysis completion, archive promotion and sync acknowledgement | `jobs::tests::crash_*` (transfer before checkpoint, at completion, after registration; analysis; sync ack), `archive::tests::crash_*` (every promotion step, rename and copy paths) | Done |
+| Tray close continues work; explicit Quit stops cleanly | Close is intercepted and hides the window; Quit parks running jobs (`jobs::tests::worker_pool_runs_jobs_and_stops_cleanly`). Smoke run logs "stopped background work". Hiding to the tray needs a manual check. | Needs manual check |
+| Every non-running state shows a human-readable reason | SQL CHECK constraints on `job` and `candidate`; `no_reasonless_holds` assertions across the scheduler tests; `pipeline::tests::non_active_status_requires_reason` | Done |
+
+### #3 Library import
+
+| Criterion | Evidence | Status |
+| --- | --- | --- |
+| Importing never renames or moves existing audio | `library::tests::import_never_renames_moves_or_modifies_files` compares path, size, mtime and a hash of every file before and after import and rescan | Done |
+| Library search works offline on a 10k-track fixture library | `library::tests::search_is_fast_on_ten_thousand_tracks`: 3 to 18 ms per query in release on the development machine | Done |
+| Missing and corrupt files keep metadata and produce actionable errors | `missing_file_keeps_metadata_rating_and_playlist`, `corrupt_file_keeps_its_record_with_an_actionable_reason`, playback marks files on load failure | Done |
+| Relinking a moved file restores playback, ratings and playlist membership | `relinking_a_moved_file_restores_playback_ratings_and_playlists`, `importing_a_folder_containing_a_moved_file_relinks_it_automatically` | Done |
+
+### #4 Playback
+
+| Criterion | Evidence | Status |
+| --- | --- | --- |
+| Playback stays smooth while analysis runs, measured on reference hardware | `playback::no_underruns_while_background_decoding_runs` (null output, CI) and the device harness: zero underruns with 2 and 10 busy threads on the development machine. Reference hardware is chosen in #21. | Done on dev machine; reference hardware pending |
+| Each advertised format has a decode test using synthetic audio | `crates/audio/tests/decode.rs`, `every_advertised_extension_has_a_fixture`; see `docs/formats.md` | Done |
+| Corrupt or missing file gives an actionable error, no crash | `missing_and_corrupt_files_fail_to_load_without_disturbing_playback`, `missing_file_is_not_found`, `truncated_flac_is_corrupt` | Done |
+
+### #5 Review queue
+
+| Criterion | Evidence | Status |
+| --- | --- | --- |
+| Rating, skip and undo have distinct persisted semantics | `review::tests::every_rating_kind_is_distinct_*`, `skip_defers_for_the_session_only_*`, `undo_reverses_the_last_rating_then_the_last_skip`, `undo_restores_the_previous_rating`, `undo_only_affects_its_own_session` | Done |
+| A rating does not retain audio by itself | `rating_does_not_keep_audio_and_keep_does_not_rate` | Done |
+| Every action is fully usable from the keyboard | Frontend `Review.test.ts`: 0 to 3, S, Z, K, P and arrows each send the right command; double presses rate once | Done |
+| Tracks without local audio never appear as ready | `tracks_without_local_audio_are_never_ready` (YouTube-only, forced state, missing file) | Done |
+
+### #6 Playlists
+
+| Criterion | Evidence | Status |
+| --- | --- | --- |
+| Playlists work fully offline | All playlist code is local SQLite; `playlists::tests::*` | Done |
+| Reorder persists across restart | `reorder_persists_across_restart` | Done |
+| Deleting a playlist leaves files and ratings intact | `deleting_a_playlist_leaves_files_ratings_and_other_playlists` | Done |
+
+### #7 Staging and archive
+
+| Criterion | Evidence | Status |
+| --- | --- | --- |
+| Collisions and interrupted moves cannot overwrite or lose audio | `collisions_never_overwrite`, `a_file_that_appears_at_the_destination_is_never_overwritten`, `crash_*` tests, `fsops::tests::*_refuses_to_overwrite` | Done (Linux and Windows code paths run first in CI) |
+| Filename sanitisation tested for Windows, macOS and Linux | `sanitises_characters_that_break_on_some_platform`, `avoids_windows_reserved_names`, `normalises_unicode_and_limits_length_*` | Done |
+| Clearing temp files keeps metadata and features | `clearing_temporary_audio_keeps_metadata_features_and_retained_tracks` | Done |
+
+### #15 Onboarding (milestone 1 part)
+
+First-run setup covers music folders and the archive location; every step can be skipped. Settings mirrors them and adds limits, close-to-tray and demo discovery. Connection tests and credential storage arrive with the integrations in milestone 3.
+
+### Known gaps
+
+- The Windows and Linux file-move code (`renameat2`, `MoveFileExW`) compiles and runs only in CI; it has not run on a real Windows or Linux machine yet.
+- Embedded cover art is not shown yet; the review card shows a placeholder.
+- Real discovery, identity matching and analysis are milestones 2 and 3. Milestone 1 uses opt-in demo discovery that generates tones.

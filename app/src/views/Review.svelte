@@ -127,6 +127,8 @@
   function onKey(e: KeyboardEvent) {
     const t = e.target as HTMLElement
     if (['INPUT', 'SELECT', 'TEXTAREA'].includes(t.tagName) || e.metaKey || e.ctrlKey || e.altKey) return
+    // Shortcuts belong to the card, not to a dialog shown over it.
+    if (document.querySelector('[role="dialog"]')) return
     const k = e.key.toLowerCase()
     const map: Record<string, () => void> = {
       '0': () => rate('thumbs_down'),

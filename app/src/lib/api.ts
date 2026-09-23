@@ -305,6 +305,27 @@ export interface ClearSummary {
   unreviewed_skipped: number
 }
 
+export interface UserLimits {
+  ready_target: number
+  replenish_below: number
+  active_downloads: number
+  analysis_jobs: number
+  temp_budget_gb: number
+  daily_acquisitions: number
+  source_refresh_hours: number
+}
+
+export interface AppSettings {
+  archive_dir: string
+  archive_dir_is_default: boolean
+  staging_dir: string
+  limits: UserLimits
+  demo_discovery: boolean
+  close_to_tray: boolean
+  onboarded: boolean
+  data_dir: string
+}
+
 export const api = {
   appInfo: () => invoke<AppInfo>('app_info'),
   activity: (states: JobState[], limit = 200) => invoke<Activity>('activity', { states, limit }),
@@ -357,4 +378,11 @@ export const api = {
   setDemoDiscovery: (enabled: boolean) => invoke<void>('demo_discovery_set', { enabled }),
   storageStatus: () => invoke<StorageStatus>('storage_status'),
   clearStaging: (includeUnreviewed: boolean) => invoke<ClearSummary>('staging_clear', { includeUnreviewed }),
+
+  settings: () => invoke<AppSettings>('settings_get'),
+  setArchiveDir: (path: string | null) => invoke<void>('settings_set_archive_dir', { path }),
+  setStagingDir: (path: string) => invoke<void>('settings_set_staging_dir', { path }),
+  setLimits: (limits: UserLimits) => invoke<void>('settings_set_limits', { limits }),
+  setCloseToTray: (enabled: boolean) => invoke<void>('settings_set_close_to_tray', { enabled }),
+  completeOnboarding: () => invoke<void>('onboarding_complete'),
 }

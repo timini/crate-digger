@@ -6,6 +6,9 @@
   import PlayerBar from './components/PlayerBar.svelte'
   import Playlists from './views/Playlists.svelte'
   import Review from './views/Review.svelte'
+  import Settings from './views/Settings.svelte'
+  import Onboarding from './components/Onboarding.svelte'
+  import type { AppSettings } from './lib/api'
 
   type View = 'review' | 'library' | 'playlists' | 'activity' | 'settings'
   const views: { id: View; label: string }[] = [
@@ -19,10 +22,13 @@
   let current: View = $state('review')
   let info: AppInfo | null = $state(null)
   let error: string | null = $state(null)
+  let firstRun: AppSettings | null = $state(null)
 
   onMount(async () => {
     try {
       info = await api.appInfo()
+      const s = await api.settings()
+      if (!s.onboarded) firstRun = s
     } catch (e) {
       error = String(e)
     }
@@ -52,6 +58,8 @@
       <Library />
     {:else if current === 'playlists'}
       <Playlists />
+    {:else if current === 'settings'}
+      <Settings />
     {:else}
       <p class="muted">{views.find((v) => v.id === current)?.label} view</p>
     {/if}
@@ -59,3 +67,6 @@
 </div>
 <PlayerBar />
 </div>
+{#if firstRun}
+  <Onboarding settings={firstRun} ondone={() => ((firstRun = null), (current = 'library'))} />
+{/if}

@@ -2,7 +2,7 @@
 
 A free, open-source desktop app for DJs to discover, audition, download, organise and playlist music.
 
-**Status: milestone 1 (local foundation) in progress.**
+**Status: milestone 1 (local foundation) implemented: library import, playback, review queue with ratings, playlists and archive. Discovery sources arrive in milestone 3; a demo mode generates tones to try the review flow.**
 
 Crate Digger combines cultural recommendations from tracklists, labels and community sources with audio similarity learned from personal ratings. A local background agent keeps music ready to review. A central service backs up and shares track metadata and audio embeddings; playback, analysis and personal recommendations run locally.
 
@@ -22,6 +22,13 @@ pnpm install
 pnpm tauri dev          # run the app
 pnpm test               # frontend tests
 cargo test --workspace  # Rust tests (from the repo root)
+scripts/check.sh        # everything CI checks, from the repo root
+```
+
+To index a folder from the command line (useful for trying a real library):
+
+```sh
+cargo run --release -p cd-core --example import -- <database.sqlite> <music folder>
 ```
 
 Layout:

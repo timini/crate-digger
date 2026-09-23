@@ -1,6 +1,7 @@
 mod commands;
 mod probe;
 mod state;
+mod tray;
 mod workers;
 
 use tauri::Manager;
@@ -28,9 +29,11 @@ pub fn run() {
                 .unwrap_or_else(|_| data_dir.join("archive"));
             let state = state::AppState::open(&data_dir, default_archive)?;
             state.recover_archive();
+            state.apply_limits();
             let handlers = workers::handlers(&state);
             state.start_workers(handlers)?;
             app.manage(state);
+            tray::install(app.handle())?;
 
             // CRATE_DIGGER_SMOKE=1: prove the app starts, then exit cleanly.
             if std::env::var_os("CRATE_DIGGER_SMOKE").is_some() {
@@ -88,14 +91,30 @@ pub fn run() {
             commands::review::review_find_more,
             commands::review::storage_status,
             commands::review::staging_clear,
+            commands::settings::settings_get,
+            commands::settings::settings_set_archive_dir,
+            commands::settings::settings_set_staging_dir,
+            commands::settings::settings_set_limits,
+            commands::settings::settings_set_close_to_tray,
+            commands::settings::onboarding_complete,
             commands::review::demo_discovery_get,
             commands::review::demo_discovery_set,
         ])
+        .on_window_event(|window, event| {
+            // Closing the window hides it; work continues in the tray.
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                if window.app_handle().state::<state::AppState>().close_to_tray() {
+                    api.prevent_close();
+                    let _ = window.hide();
+                }
+            }
+        })
         .build(tauri::generate_context!())
         .expect("error while building Crate Digger")
-        .run(|app, event| {
-            if let tauri::RunEvent::Exit = event {
-                app.state::<state::AppState>().shutdown();
-            }
+        .run(|app, event| match event {
+            tauri::RunEvent::Exit => app.state::<state::AppState>().shutdown(),
+            #[cfg(target_os = "macos")]
+            tauri::RunEvent::Reopen { .. } => tray::show_main_window(app),
+            _ => {}
         });
 }

@@ -5,6 +5,7 @@ pub mod library;
 pub mod player;
 pub mod playlists;
 pub mod review;
+pub mod settings;
 
 use serde::Serialize;
 use tauri::State;

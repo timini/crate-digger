@@ -96,6 +96,26 @@ impl AppState {
             .unwrap_or_else(|| self.data_dir.join("staging"))
     }
 
+    /// Load the user's limits into the scheduler.
+    pub fn apply_limits(&self) {
+        if let Ok(conn) = self.db() {
+            if let Ok(l) = cd_core::settings::limits(&conn) {
+                self.scheduler.set_limits(l.scheduler_limits());
+            }
+        }
+    }
+
+    pub fn close_to_tray(&self) -> bool {
+        self.db()
+            .ok()
+            .and_then(|c| {
+                cd_core::settings::get::<bool>(&c, cd_core::settings::keys::CLOSE_TO_TRAY)
+                    .ok()
+                    .flatten()
+            })
+            .unwrap_or(true)
+    }
+
     pub fn archive_dir(&self) -> PathBuf {
         self.db()
             .ok()
