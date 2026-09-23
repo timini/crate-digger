@@ -1,0 +1,11 @@
+[workspace]
+resolver = "2"
+members = ["crates/core", "crates/audio", "app/src-tauri"]
+
+[workspace.package]
+edition = "2021"
+version = "0.1.0"
+publish = false
+
+[profile.dev.package."*"]
+opt-level = 2
