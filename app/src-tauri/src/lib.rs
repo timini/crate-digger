@@ -55,6 +55,12 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::app_info,
+            commands::connections::connections_get,
+            commands::connections::connections_save,
+            commands::connections::credential_set,
+            commands::connections::connection_test,
+            commands::connections::discovery_seeds,
+            commands::connections::discovery_seeds_save,
             commands::jobs::activity,
             commands::jobs::jobs_pause_all,
             commands::jobs::jobs_resume_all,

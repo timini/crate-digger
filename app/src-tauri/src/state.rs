@@ -21,6 +21,8 @@ pub struct AppState {
     /// Used when no archive folder has been chosen.
     pub default_archive_dir: PathBuf,
     pub analyzer: Arc<SwitchableAnalyzer>,
+    /// OS keychain in the app; tests can substitute an in-memory store.
+    pub secrets: Arc<dyn cd_connectors::credentials::SecretStore>,
 }
 
 pub fn archive_dir_setting(conn: &Connection) -> Option<PathBuf> {
@@ -55,6 +57,7 @@ impl AppState {
             session_id: cd_core::util::new_id(),
             default_archive_dir,
             analyzer,
+            secrets: Arc::new(cd_connectors::credentials::Keychain),
         })
     }
 

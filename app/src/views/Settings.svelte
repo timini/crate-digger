@@ -3,6 +3,7 @@
   import { open } from '@tauri-apps/plugin-dialog'
   import { api, type AppInfo, type AppSettings, type UserLimits } from '../lib/api'
   import Folders from '../components/Folders.svelte'
+  import Connections from '../components/Connections.svelte'
   import Models from '../components/Models.svelte'
 
   let settings: AppSettings | null = $state(null)
@@ -97,15 +98,7 @@
     <Models />
 
     <h3>Connections</h3>
-    <table class="integrations">
-      <tbody>
-        <tr><td>AI agent (API or local model)</td><td class="muted">Arrives with end-to-end discovery (#10)</td></tr>
-        <tr><td>Soulseek via slskd</td><td class="muted">Arrives with end-to-end discovery (#12)</td></tr>
-        <tr><td>Discovery seeds</td><td class="muted">Arrives with end-to-end discovery (#11)</td></tr>
-        <tr><td>Shared catalogue and private backup</td><td class="muted">Arrives with the central service (#17 to #19)</td></tr>
-      </tbody>
-    </table>
-    <p class="muted small">Library, playback, ratings and playlists work without any of these.</p>
+    <Connections />
     <label class="check">
       <input type="checkbox" checked={settings.demo_discovery} onchange={(e) => run(() => api.setDemoDiscovery(e.currentTarget.checked), 'Saved')} />
       Demo discovery: generate tone recordings so the review queue can be tried. Nothing is downloaded.
@@ -147,9 +140,6 @@
     gap: 8px;
     align-items: flex-start;
     margin: 12px 0;
-  }
-  .integrations td {
-    padding: 4px 16px 4px 0;
   }
   .small {
     font-size: 12px;

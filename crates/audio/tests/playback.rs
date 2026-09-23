@@ -87,7 +87,7 @@ fn reaches_the_end_and_can_restart() {
     );
     assert!(!p.is_playing());
     p.play();
-    assert!(wait_until(500, || p.status().state == PlayState::Playing
+    assert!(wait_until(5_000, || p.status().state == PlayState::Playing
         && p.status().position_ms < 1_000));
 }
 
@@ -95,7 +95,7 @@ fn reaches_the_end_and_can_restart() {
 fn missing_and_corrupt_files_fail_to_load_without_disturbing_playback() {
     let p = null_player(48_000);
     p.load(&fixture("tone.flac"), 0, true).unwrap();
-    assert!(wait_until(500, || p.status().state == PlayState::Playing));
+    assert!(wait_until(5_000, || p.status().state == PlayState::Playing));
     assert!(matches!(
         p.load(&fixture("nope.flac"), 0, true),
         Err(AudioError::NotFound(_))

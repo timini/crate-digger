@@ -457,3 +457,21 @@ export const api = {
   downloadProgress: () => invoke<{ id: string; bytes: number } | null>('model_download_progress'),
   chooseModel: (id: string | null) => invoke<void>('model_choose', { id }),
 }
+
+export interface Connections {
+  llm_provider: string
+  llm_endpoint: string
+  llm_model: string
+  slskd_endpoint: string
+  external_slskd: boolean
+  enabled: boolean
+}
+export interface Seed { kind: 'artist' | 'label' | 'dj' | 'track'; value: string }
+export const connections = {
+  get: () => invoke<Connections>('connections_get'),
+  save: (config: Connections) => invoke<void>('connections_save', { config }),
+  credential: (key: string, value: string | null) => invoke<void>('credential_set', { key, value }),
+  test: (service: string) => invoke<string>('connection_test', { service }),
+  seeds: () => invoke<Seed[]>('discovery_seeds'),
+  saveSeeds: (seeds: Seed[]) => invoke<void>('discovery_seeds_save', { seeds }),
+}

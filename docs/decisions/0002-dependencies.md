@@ -19,7 +19,9 @@ Status: recorded for milestones 1 and 2. The code licence for Crate Digger itsel
 | tract-onnx 0.23 | Running pretrained models | MIT OR Apache-2.0 |
 | blake3 | Content hashes | CC0-1.0 OR Apache-2.0 |
 | sha2 | Model checksums | MIT OR Apache-2.0 |
-| ureq 3 | Downloading models on request | MIT OR Apache-2.0 |
+| ureq 3 | Downloading models on request; service connectors | MIT OR Apache-2.0 |
+| keyring 3.6.3 | OS credential store (Keychain, Windows Credential Manager, Secret Service) | MIT OR Apache-2.0 |
+| url 2 | Endpoint validation in connectors | MIT OR Apache-2.0 |
 | walkdir, uuid, serde, unicode-normalization | Utilities | MIT OR Apache-2.0 (walkdir also Unlicense) |
 
 Test-only: fail (Apache-2.0), tempfile, vitest and testing-library (MIT).
