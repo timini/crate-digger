@@ -113,6 +113,8 @@ pub fn run() {
             commands::playlists::playlist_rename,
             commands::playlists::playlist_delete,
             commands::playlists::playlist_entries,
+            commands::playlists::playlist_export_check,
+            commands::playlists::playlist_export,
             commands::playlists::playlist_add,
             commands::playlists::playlist_remove,
             commands::playlists::playlist_move,

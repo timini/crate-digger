@@ -646,6 +646,7 @@ dependencies = [
  "fail",
  "libc",
  "lofty",
+ "quick-xml",
  "rusqlite",
  "rusty-chromaprint",
  "serde",

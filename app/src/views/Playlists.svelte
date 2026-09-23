@@ -3,6 +3,7 @@
   import { api, type Playlist, type PlaylistEntry } from '../lib/api'
   import { formatDuration, formatRating, trackLabel } from '../lib/format'
   import { playTrack } from '../lib/player.svelte'
+  import ExportPlaylist from '../components/ExportPlaylist.svelte'
 
   let playlists: Playlist[] = $state([])
   let current: string | null = $state(null)
@@ -128,6 +129,7 @@
           <span class="muted">{currentPlaylist.track_count} tracks · {formatDuration(currentPlaylist.duration_ms)}</span>
           <div class="actions">
             <button onclick={() => ((renaming = true), (renameValue = currentPlaylist.name))}>Rename</button>
+            {#key current}<ExportPlaylist id={current!} />{/key}
             {#if confirmDelete}
               <span class="muted">Delete the playlist? Tracks and files are kept.</span>
               <button class="danger" onclick={() => run(() => api.deletePlaylist(current!)).then(() => ((current = null), (confirmDelete = false), loadPlaylists().then(loadEntries)))}>Delete</button>

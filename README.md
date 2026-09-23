@@ -1,16 +1,32 @@
 # Crate Digger
 
-A free, open-source desktop app for DJs to discover, audition, download, organise and playlist music.
+A free, open-source desktop app that keeps a DJ's queue full of new music worth hearing.
 
-**Status: milestone 1 (local foundation) implemented: library import, playback, review queue with ratings, playlists and archive. Discovery sources arrive in milestone 3; a demo mode generates tones to try the review flow.**
+![The review screen: a track playing with its waveform, rating keys, why it was suggested and the evidence behind it](docs/images/review.png)
 
-Crate Digger combines cultural recommendations from tracklists, labels and community sources with audio similarity learned from personal ratings. A local background agent keeps music ready to review. A central service backs up and shares track metadata and audio embeddings; playback, analysis and personal recommendations run locally.
+Crate Digger finds tracks through the places DJs already dig (Discogs artist and label relationships, tracklists, forum and editorial pages, text you paste) and downloads them from Soulseek. It checks and analyses each file, then ranks everything by your own ratings. You rate tracks as they play; your ratings reshape the queue and point discovery in new directions. Keepers go to your archive and your playlists, and playlists export to Rekordbox.
+
+Everything runs on your computer. The AI model can be local (Ollama, LM Studio) or an API. Your logins stay in the operating system's keychain.
+
+## What works today
+
+- **Library**: import folders, play and edit tags, detect duplicates and different versions of the same track by audio fingerprint.
+- **Review queue**: rate with one key, skip, undo; see why each track was suggested and the evidence behind it.
+- **Discovery**: Discogs, public pages (robots.txt respected) and pasted text. Model suggestions stay unverified until a real source confirms them. Discovery can refresh every six hours.
+- **Downloads**: a managed copy of [slskd](https://github.com/slskd/slskd), or your own. A calibrated matching rule prefers lossless, then 320 kbps MP3. You choose from a ranked list unless you turn on unattended downloads.
+- **Analysis**: tempo, key, loudness and a pretrained music embedding, computed in a separate process.
+- **Ranking**: taste clusters from your ratings, with dislikes, source evidence and 20% exploration.
+- **YouTube references**: confirmed video links you can correct.
+- **Playlists**: ordered playlists with M3U8 and Rekordbox XML export.
+
+Not yet built: the optional shared catalogue, and private backup (milestone 4), plus packaged releases (milestone 5).
 
 ## Documents
 
-- [Product specification](docs/product-spec.md)
-- [Implementation plan and acceptance checklist](docs/implementation-plan.md)
-- [Milestone 1 plan](docs/milestone-1-plan.md)
+- [Product specification](docs/product-spec.md) and [implementation plan](docs/implementation-plan.md)
+- Milestone plans with acceptance evidence: [1](docs/milestone-1-plan.md), [2](docs/milestone-2-plan.md), [3](docs/milestone-3-plan.md), [4](docs/milestone-4-plan.md)
+- Calibration reports: [identity](docs/identity-calibration.md), [download matching](docs/acquisition-calibration.md), [ranking](docs/ranking-calibration.md)
+- Decisions: [analysis model](docs/decisions/0001-analysis-model.md), [dependencies and licences](docs/decisions/0002-dependencies.md)
 
 ## Development
 
@@ -34,21 +50,13 @@ cargo run --release -p cd-core --example import -- <database.sqlite> <music fold
 Layout:
 
 - `crates/core`: domain model, SQLite schema and migrations, jobs, library, archive and adapter interfaces. No UI and no network access.
-- `crates/audio`: decoding, playback and waveforms.
+- `crates/audio`: decoding, playback, waveforms and fingerprints.
+- `crates/analyzer`: the analysis worker (tempo, key, loudness, embeddings).
+- `crates/connectors`: everything that talks to the network: models, Discogs, pages, YouTube, slskd, the keychain.
 - `app/src-tauri`: the Tauri shell that wires the core to the UI.
 - `app/src`: the Svelte and TypeScript interface.
 
 Set `CRATE_DIGGER_DATA_DIR` to use a data directory other than the platform default.
-
-## Intended first release
-
-- Rust desktop core for macOS, Windows and Linux, with a Tauri interface.
-- Library, discovery and download views.
-- API-based and local LLM connections.
-- Agent-populated YouTube reference links, local-file import and Soulseek acquisition through slskd.
-- Audio analysis, personal ratings and continuously replenished recommendations.
-- Playlists with M3U8 and Rekordbox XML export.
-- Optional shared metadata and embeddings, plus separate private metadata backup.
 
 ## Open-source intention
 
