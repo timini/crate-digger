@@ -7,6 +7,7 @@
   import AddToPlaylist from '../components/AddToPlaylist.svelte'
   import DiscoverFrom from '../components/DiscoverFrom.svelte'
   import DownloadChoices from '../components/DownloadChoices.svelte'
+  import QueueHealth from '../components/QueueHealth.svelte'
   import YoutubeLinks from '../components/YoutubeLinks.svelte'
   import Waveform from '../components/Waveform.svelte'
 
@@ -200,6 +201,7 @@
   </header>
 
   {#if error}<p class="error">{error}</p>{/if}
+  <QueueHealth />
   <DownloadChoices />
 
   {#if card}

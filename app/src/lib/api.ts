@@ -501,6 +501,11 @@ export interface DownloadChoice {
   outcome: { ranked: DownloadOption[]; decision: { kind: 'auto' | 'choose' | 'nothing'; recommended?: number | null; why?: string } }
   created_at: number
 }
+export interface QueueHealth {
+  buffer: { ready: number; in_progress: number; target: number; below: number }
+  holds: { code: string; message: string }[]
+  availability: { samples: number; any_ready: number; above_threshold: number }
+}
 export interface SourceRun {
   source: string
   input: string
@@ -522,6 +527,7 @@ export const connections = {
   fromPage: (url: string) => invoke<void>('discovery_page', { url }),
   fromText: (text: string, label: string | null) => invoke<void>('discovery_paste', { text, label }),
   runs: () => invoke<SourceRun[]>('discovery_runs'),
+  queueHealth: () => invoke<QueueHealth>('queue_health'),
   youtubeSet: (trackId: string, url: string) => invoke<void>('youtube_set', { trackId, url }),
   youtubePrefer: (trackId: string, videoId: string) => invoke<void>('youtube_prefer', { trackId, videoId }),
   youtubeReject: (trackId: string, videoId: string) => invoke<void>('youtube_reject', { trackId, videoId }),

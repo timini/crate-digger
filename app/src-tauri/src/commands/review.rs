@@ -127,3 +127,28 @@ pub fn demo_discovery_get(state: State<'_, AppState>) -> CmdResult<bool> {
 pub fn demo_discovery_set(state: State<'_, AppState>, enabled: bool) -> CmdResult<()> {
     settings::set(&*state.db()?, settings::keys::DEMO_DISCOVERY, &enabled).map_err(err)
 }
+
+#[derive(serde::Serialize)]
+pub struct QueueHealth {
+    buffer: cd_core::replenish::Buffer,
+    holds: Vec<cd_core::replenish::Hold>,
+    /// Over the last 7 days.
+    availability: cd_core::replenish::Availability,
+}
+
+/// Why the ready queue is short, and how often it has been full.
+#[tauri::command]
+pub fn queue_health(state: State<'_, AppState>) -> CmdResult<QueueHealth> {
+    let conn = state.db()?;
+    let limits = settings::limits(&conn).map_err(err)?;
+    Ok(QueueHealth {
+        buffer: cd_core::replenish::buffer(&conn, &limits).map_err(err)?,
+        holds: cd_core::replenish::health(&conn).map_err(err)?,
+        availability: cd_core::replenish::availability(
+            &conn,
+            now_ms() - 7 * 86_400_000,
+            limits.replenish_below as i64,
+        )
+        .map_err(err)?,
+    })
+}

@@ -27,6 +27,7 @@ pub const MIGRATIONS: &[(i64, &str, &str)] = &[
         include_str!("../migrations/0010_acquisition.sql"),
     ),
     (11, "ranking", include_str!("../migrations/0011_ranking.sql")),
+    (12, "buffer", include_str!("../migrations/0012_buffer.sql")),
 ];
 
 pub fn latest_version() -> i64 {

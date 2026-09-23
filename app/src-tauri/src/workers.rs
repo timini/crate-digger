@@ -26,6 +26,30 @@ pub const SOULSEEK_CONNECTOR: &str = "slskd";
 /// Seed discovery runs this often while the app is open and it is turned on.
 pub const REFRESH_INTERVAL_MS: i64 = 6 * 3_600_000;
 
+/// Sample the ready queue and, with automatic discovery on, top it up.
+fn keep_queue_full(state: &AppState) {
+    let Ok(conn) = state.db() else { return };
+    let now = cd_core::util::now_ms();
+    let limits = cd_core::settings::limits(&conn).unwrap_or_default();
+    if let Ok(b) = cd_core::replenish::buffer(&conn, &limits) {
+        let _ = cd_core::replenish::sample(&conn, b.ready, now);
+    }
+    let demo =
+        cd_core::settings::get_or(&conn, cd_core::settings::keys::DEMO_DISCOVERY, false).unwrap_or(false);
+    let automatic = state.connections.read().unwrap().enabled;
+    let connector = if demo { DEMO_CONNECTOR } else { LIVE_SOURCE };
+    if demo || automatic {
+        match cd_core::replenish::top_up(&conn, connector, &limits, now) {
+            Ok(Some(_)) => {
+                drop(conn);
+                state.notify_workers();
+            }
+            Ok(None) => {}
+            Err(e) => tracing::warn!("could not top up the queue: {e}"),
+        }
+    }
+}
+
 /// Tracks that became ready since the last rerank have no queue place yet.
 fn rank_new_arrivals(state: &AppState) {
     use cd_core::analysis::handler::Analyzer;
@@ -56,6 +80,7 @@ pub fn spawn_refresh(app: tauri::AppHandle) {
         std::thread::sleep(Duration::from_secs(60));
         let state = app.state::<AppState>();
         rank_new_arrivals(&state);
+        keep_queue_full(&state);
         if !state.connections.read().unwrap().enabled {
             continue;
         }
