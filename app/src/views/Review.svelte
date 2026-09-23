@@ -5,6 +5,10 @@
   import { formatCodec, formatDuration, trackLabel } from '../lib/format'
   import { player, playTrack, seekBy, seekTo } from '../lib/player.svelte'
   import AddToPlaylist from '../components/AddToPlaylist.svelte'
+  import DiscoverFrom from '../components/DiscoverFrom.svelte'
+  import DownloadChoices from '../components/DownloadChoices.svelte'
+  import QueueHealth from '../components/QueueHealth.svelte'
+  import YoutubeLinks from '../components/YoutubeLinks.svelte'
   import Waveform from '../components/Waveform.svelte'
 
   let cards: ReviewCard[] = $state([])
@@ -197,6 +201,8 @@
   </header>
 
   {#if error}<p class="error">{error}</p>{/if}
+  <QueueHealth />
+  <DownloadChoices />
 
   {#if card}
     <div
@@ -270,12 +276,9 @@
         </div>
         <div>
           <h4>YouTube</h4>
-          {#each card.youtube as y}
-            <button class="link" onclick={() => openUrl(y.url)}>{y.title ?? y.url}</button>
-            <span class="muted small">{y.channel ?? ''} · {Math.round(y.confidence * 100)}%</span>
-          {:else}
-            <p class="muted">No YouTube reference yet.</p>
-          {/each}
+          {#key card.track_id}
+            <YoutubeLinks trackId={card.track_id} links={card.youtube} status={card.youtube_status} onchanged={load} />
+          {/key}
         </div>
       </div>
     </div>
@@ -293,12 +296,16 @@
           <button class="primary" onclick={findMore}>Find more</button>
         {:else}
           <p class="muted">
-            Discovery sources (Discogs, tracklists and Soulseek) arrive in a later release. Demo discovery generates
-            tone recordings so you can try reviewing now. Nothing is downloaded.
+            Find more expands your seeds and ratings through Discogs or your model (set them up in Settings). You can
+            also read a public tracklist page or paste text. Soulseek downloads arrive in a later release; until then
+            new tracks wait in the queue with a reason.
           </p>
-          <button class="primary" onclick={enableDemo}>Try demo discovery</button>
+          <button class="primary" onclick={findMore}>Find more</button>
+          <p class="muted small">Or try demo discovery, which generates tone recordings. Nothing is downloaded.</p>
+          <button onclick={enableDemo}>Try demo discovery</button>
         {/if}
       {/if}
+      {#if !demo}<DiscoverFrom />{/if}
       {#if stats?.skipped}<p class="muted">{stats.skipped} skipped tracks come back next session.</p>{/if}
       <button onclick={undo}>Undo last <kbd>Z</kbd></button>
     </div>

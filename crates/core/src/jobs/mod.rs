@@ -26,6 +26,7 @@ pub mod kinds {
     pub const DISCOVER: &str = "discover";
     pub const SYNC: &str = "sync";
     pub const ARCHIVE: &str = "archive";
+    pub const YOUTUBE: &str = "youtube";
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -132,6 +133,10 @@ pub enum JobError {
     Fatal(String),
     /// A resource limit stops the job until the limit clears.
     Blocked { hold: HoldCode, reason: String },
+    /// Nothing is wrong, but the job must wait for something outside the app
+    /// (a download queued on another user's computer). Runs again after
+    /// `delay_ms` and does not use up an attempt.
+    Wait { reason: String, delay_ms: i64 },
     /// The worker lost its lease or is shutting down. The job row is left
     /// for whoever now owns it (or for recovery on the next start).
     Stopped,
@@ -142,7 +147,7 @@ impl std::fmt::Display for JobError {
         match self {
             JobError::Retryable(m) | JobError::Fatal(m) => f.write_str(m),
             JobError::Auth { connector, message } => write!(f, "{connector}: {message}"),
-            JobError::Blocked { reason, .. } => f.write_str(reason),
+            JobError::Blocked { reason, .. } | JobError::Wait { reason, .. } => f.write_str(reason),
             JobError::Stopped => f.write_str("stopped"),
         }
     }
@@ -348,6 +353,13 @@ pub fn record_failure(
             )
         }
         JobError::Fatal(msg) => (JobState::Failed, None, msg.clone(), now),
+        JobError::Wait { reason, delay_ms } => {
+            conn.execute(
+                "UPDATE job SET attempts = MAX(attempts - 1, 0) WHERE id = ?1 AND lease_owner = ?2",
+                params![job.id, owner],
+            )?;
+            (JobState::Queued, None, reason.clone(), now + (*delay_ms).max(0))
+        }
         JobError::Blocked { hold, reason } => (JobState::Blocked, Some(*hold), reason.clone(), now),
         JobError::Auth { connector, message } => {
             set_connector_status(conn, connector, ConnectorStatus::AuthFailed, Some(message), now)?;
@@ -369,7 +381,7 @@ pub fn record_failure(
 }
 
 fn auth_reason(connector: &str, message: &str) -> String {
-    format!("Paused: {connector} rejected the sign-in ({message}). Fix the connection in Settings to resume.")
+    format!("Paused: {connector} needs attention ({message}). Fix the connection in Settings to resume.")
 }
 
 /// Cancel a job in any unfinished state. A running job notices at its next

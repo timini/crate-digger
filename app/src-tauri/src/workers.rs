@@ -3,6 +3,8 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use cd_connectors::discovery::{LiveSource, LIVE_SOURCE, PAGE_SOURCE};
+use cd_connectors::http::Http;
 use cd_core::acquisition::{AcquireHandler, ValidateHandler};
 use cd_core::adapters::demo::{DemoAcquirer, DemoSource};
 use cd_core::analysis::handler::{AnalysisHandler, Analyzer, ProcessAnalyzer};
@@ -17,8 +19,86 @@ use cd_core::library::{AudioProbe, ImportHandler};
 use crate::probe::SymphoniaProbe;
 use crate::state::AppState;
 
-/// Connector name for the only acquisition source in milestone 1.
+/// Connector name for demo discovery and its generated audio.
 pub const DEMO_CONNECTOR: &str = "demo";
+/// Connector name for Soulseek downloads through slskd.
+pub const SOULSEEK_CONNECTOR: &str = "slskd";
+/// Seed discovery runs this often while the app is open and it is turned on.
+pub const REFRESH_INTERVAL_MS: i64 = 6 * 3_600_000;
+
+/// Sample the ready queue and, with automatic discovery on, top it up.
+fn keep_queue_full(state: &AppState) {
+    let Ok(conn) = state.db() else { return };
+    let now = cd_core::util::now_ms();
+    let limits = cd_core::settings::limits(&conn).unwrap_or_default();
+    if let Ok(b) = cd_core::replenish::buffer(&conn, &limits) {
+        let _ = cd_core::replenish::sample(&conn, b.ready, now);
+    }
+    let demo =
+        cd_core::settings::get_or(&conn, cd_core::settings::keys::DEMO_DISCOVERY, false).unwrap_or(false);
+    let automatic = state.connections.read().unwrap().enabled;
+    let connector = if demo { DEMO_CONNECTOR } else { LIVE_SOURCE };
+    if demo || automatic {
+        match cd_core::replenish::top_up(&conn, connector, &limits, now) {
+            Ok(Some(_)) => {
+                drop(conn);
+                state.notify_workers();
+            }
+            Ok(None) => {}
+            Err(e) => tracing::warn!("could not top up the queue: {e}"),
+        }
+    }
+}
+
+/// Tracks that became ready since the last rerank have no queue place yet.
+fn rank_new_arrivals(state: &AppState) {
+    use cd_core::analysis::handler::Analyzer;
+    let Ok(conn) = state.db() else { return };
+    let waiting: bool = conn
+        .query_row(
+            "SELECT EXISTS (SELECT 1 FROM candidate WHERE stage = 'ready' AND status = 'active' AND queue_rank IS NULL)",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap_or(false);
+    drop(conn);
+    if waiting {
+        let version = state.analyzer.version();
+        state.spawn_background("rerank", move |conn| {
+            if let Err(e) = cd_core::review::rerank(conn, &version) {
+                tracing::warn!("rerank failed: {e}");
+            }
+        });
+    }
+}
+
+/// Queues seed discovery every six hours while automatic discovery is on.
+/// A run that cannot proceed records why, so nothing fails silently.
+pub fn spawn_refresh(app: tauri::AppHandle) {
+    use tauri::Manager;
+    std::thread::spawn(move || loop {
+        std::thread::sleep(Duration::from_secs(60));
+        let state = app.state::<AppState>();
+        rank_new_arrivals(&state);
+        keep_queue_full(&state);
+        if !state.connections.read().unwrap().enabled {
+            continue;
+        }
+        let Ok(conn) = state.db() else { continue };
+        let now = cd_core::util::now_ms();
+        match cd_core::discovery::refresh_due(&conn, LIVE_SOURCE, REFRESH_INTERVAL_MS, now) {
+            Ok(true) => {
+                if let Err(e) = cd_core::discovery::request_discovery(&conn, LIVE_SOURCE, 20, now) {
+                    tracing::warn!("could not queue discovery: {e}");
+                }
+                drop(conn);
+                state.notify_workers();
+            }
+            Ok(false) => {}
+            Err(e) => tracing::warn!("could not check discovery refresh: {e}"),
+        }
+    });
+}
 
 /// Analysis runs in a copy of this executable started with the worker flag,
 /// so a crash in decoding or analysis cannot take the app down. The chosen
@@ -49,6 +129,22 @@ pub fn plan_analysis(conn: &rusqlite::Connection, version: &FeatureVersion) -> c
     Ok(())
 }
 
+pub fn youtube(state: &AppState) -> cd_connectors::youtube::YouTube {
+    cd_connectors::youtube::YouTube {
+        secrets: state.secrets.clone(),
+        transport: Arc::new(Http::default()),
+    }
+}
+
+fn live(state: &AppState, name: &'static str) -> Arc<LiveSource> {
+    Arc::new(LiveSource {
+        name,
+        config: state.connections.clone(),
+        secrets: state.secrets.clone(),
+        transport: Arc::new(Http::default()),
+    })
+}
+
 pub fn handlers(state: &AppState) -> Vec<Arc<dyn Handler>> {
     let probe: Arc<dyn AudioProbe> = Arc::new(SymphoniaProbe);
     vec![
@@ -59,15 +155,38 @@ pub fn handlers(state: &AppState) -> Vec<Arc<dyn Handler>> {
                 Arc::new(move |conn| plan_analysis(conn, &analyzer.version()))
             }),
         }),
-        Arc::new(DiscoverHandler {
-            source: Arc::new(DemoSource),
-            acquirer_id: DEMO_CONNECTOR.into(),
+        Arc::new(
+            DiscoverHandler::new(Arc::new(DemoSource), DEMO_CONNECTOR)
+                .route(live(state, LIVE_SOURCE), SOULSEEK_CONNECTOR)
+                .with_video_lookup()
+                .route(live(state, PAGE_SOURCE), SOULSEEK_CONNECTOR)
+                .with_video_lookup(),
+        ),
+        Arc::new(cd_core::youtube::YoutubeHandler {
+            lookup: Arc::new(youtube(state)),
         }),
         Arc::new(AcquireHandler {
-            acquirer: Arc::new(DemoAcquirer::default()),
+            acquirers: vec![
+                Arc::new(DemoAcquirer::default()),
+                Arc::new(cd_connectors::slskd::SoulseekAcquirer {
+                    locate: state.soulseek.clone(),
+                    model: {
+                        let config = state.connections.clone();
+                        let secrets = state.secrets.clone();
+                        Arc::new(move || {
+                            let c = config.read().unwrap().clone();
+                            if c.llm_model.trim().is_empty() {
+                                return None;
+                            }
+                            cd_connectors::llm::client(&c, &*secrets, Arc::new(Http::default())).ok()
+                        })
+                    },
+                }),
+            ],
             staging_root: state.staging_dir(),
             probe: probe.clone(),
             poll: Duration::from_millis(500),
+            queued_watch: cd_core::acquisition::QUEUED_WATCH,
         }),
         Arc::new(ValidateHandler { probe }),
         {

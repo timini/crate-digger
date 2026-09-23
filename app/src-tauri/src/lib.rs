@@ -1,6 +1,7 @@
 mod commands;
 mod models;
 mod probe;
+mod soulseek;
 mod state;
 mod tray;
 mod workers;
@@ -41,6 +42,12 @@ pub fn run() {
             state.start_workers(handlers)?;
             app.manage(state);
             tray::install(app.handle())?;
+            workers::spawn_refresh(app.handle().clone());
+            {
+                // Signing in can take half a minute; do not hold up the window.
+                let soulseek = app.state::<state::AppState>().soulseek.clone();
+                std::thread::spawn(move || soulseek.start_if_ready());
+            }
 
             // CRATE_DIGGER_SMOKE=1: prove the app starts, then exit cleanly.
             if std::env::var_os("CRATE_DIGGER_SMOKE").is_some() {
@@ -55,6 +62,26 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::app_info,
+            commands::connections::connections_get,
+            commands::connections::connections_save,
+            commands::connections::credential_set,
+            commands::connections::connection_test,
+            commands::connections::discovery_seeds,
+            commands::connections::discovery_seeds_save,
+            commands::connections::discovery_page,
+            commands::connections::discovery_paste,
+            commands::connections::discovery_runs,
+            commands::connections::youtube_set,
+            commands::connections::youtube_prefer,
+            commands::connections::youtube_reject,
+            commands::connections::youtube_refresh,
+            commands::connections::soulseek_status,
+            commands::connections::soulseek_setup,
+            commands::connections::download_choices,
+            commands::connections::download_choose,
+            commands::connections::download_decline,
+            commands::connections::unattended_downloads_get,
+            commands::connections::unattended_downloads_set,
             commands::jobs::activity,
             commands::jobs::jobs_pause_all,
             commands::jobs::jobs_resume_all,
@@ -112,6 +139,7 @@ pub fn run() {
             commands::analysis::model_download_progress,
             commands::analysis::model_choose,
             commands::review::demo_discovery_get,
+            commands::review::queue_health,
             commands::review::demo_discovery_set,
         ])
         .on_window_event(|window, event| {

@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/core", "crates/audio", "crates/analyzer", "app/src-tauri"]
+members = ["crates/core", "crates/audio", "crates/analyzer", "crates/connectors", "app/src-tauri"]
 
 [workspace.package]
 edition = "2021"

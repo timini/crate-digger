@@ -21,8 +21,12 @@ pub fn review_stats(state: State<'_, AppState>) -> CmdResult<QueueStats> {
 fn after_preference_change(state: &AppState) {
     // The rating is already on disk; reranking runs separately and never
     // touches the player.
-    state.spawn_background("rerank", |conn| {
-        if let Err(e) = review::rerank(conn) {
+    let version = {
+        use cd_core::analysis::handler::Analyzer;
+        state.analyzer.version()
+    };
+    state.spawn_background("rerank", move |conn| {
+        if let Err(e) = review::rerank(conn, &version) {
             tracing::warn!("rerank failed: {e}");
         }
     });
@@ -98,19 +102,17 @@ pub async fn staging_clear(
     Ok(summary)
 }
 
-/// Ask for more candidates. Until real sources exist (#11) this only works
-/// with demo discovery turned on.
+/// Ask for more candidates: demo discovery when it is on, otherwise the
+/// live sources.
 #[tauri::command]
 pub fn review_find_more(state: State<'_, AppState>) -> CmdResult<()> {
     let conn = state.db()?;
-    if !settings::get_or(&conn, settings::keys::DEMO_DISCOVERY, false).map_err(err)? {
-        return Err(
-            "No discovery sources are connected yet. Discogs, tracklists and Soulseek arrive in a later \
-             release; turn on demo discovery in Settings to try reviewing with generated tones."
-                .into(),
-        );
-    }
-    discovery::request_discovery(&conn, DEMO_CONNECTOR, 10, now_ms()).map_err(err)?;
+    let connector = if settings::get_or(&conn, settings::keys::DEMO_DISCOVERY, false).map_err(err)? {
+        DEMO_CONNECTOR
+    } else {
+        cd_connectors::discovery::LIVE_SOURCE
+    };
+    discovery::request_discovery(&conn, connector, 20, now_ms()).map_err(err)?;
     drop(conn);
     state.notify_workers();
     Ok(())
@@ -124,4 +126,29 @@ pub fn demo_discovery_get(state: State<'_, AppState>) -> CmdResult<bool> {
 #[tauri::command]
 pub fn demo_discovery_set(state: State<'_, AppState>, enabled: bool) -> CmdResult<()> {
     settings::set(&*state.db()?, settings::keys::DEMO_DISCOVERY, &enabled).map_err(err)
+}
+
+#[derive(serde::Serialize)]
+pub struct QueueHealth {
+    buffer: cd_core::replenish::Buffer,
+    holds: Vec<cd_core::replenish::Hold>,
+    /// Over the last 7 days.
+    availability: cd_core::replenish::Availability,
+}
+
+/// Why the ready queue is short, and how often it has been full.
+#[tauri::command]
+pub fn queue_health(state: State<'_, AppState>) -> CmdResult<QueueHealth> {
+    let conn = state.db()?;
+    let limits = settings::limits(&conn).map_err(err)?;
+    Ok(QueueHealth {
+        buffer: cd_core::replenish::buffer(&conn, &limits).map_err(err)?,
+        holds: cd_core::replenish::health(&conn).map_err(err)?,
+        availability: cd_core::replenish::availability(
+            &conn,
+            now_ms() - 7 * 86_400_000,
+            limits.replenish_below as i64,
+        )
+        .map_err(err)?,
+    })
 }

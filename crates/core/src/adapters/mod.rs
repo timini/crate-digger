@@ -67,10 +67,32 @@ pub struct CandidateProposal {
     pub evidence: Vec<EvidenceProposal>,
 }
 
-/// Tier 1 discovery: turns seeds into candidates with evidence.
+/// Evidence of this kind comes from a model alone and never verifies a candidate.
+pub const LLM_EVIDENCE: &str = "llm";
+
+/// What a discovery run works from.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum DiscoveryInput {
+    /// Expand saved seeds and positively rated tracks.
+    Seeds,
+    /// One public page the user supplied.
+    Page { url: String },
+    /// Text the user pasted, stored as `supplied_text`.
+    Text { supplied_text_id: String, text: String },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct DiscoveryRequest {
+    pub seeds: Vec<Seed>,
+    pub limit: usize,
+    pub input: DiscoveryInput,
+}
+
+/// Tier 1 discovery: turns seeds, pages or pasted text into candidates with evidence.
 pub trait DiscoverySource: Send + Sync {
     fn id(&self) -> &str;
-    fn discover(&self, seeds: &[Seed], limit: usize) -> AdapterResult<Vec<CandidateProposal>>;
+    fn discover(&self, request: &DiscoveryRequest) -> AdapterResult<Vec<CandidateProposal>>;
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -94,14 +116,24 @@ pub struct AcquisitionQuery {
     pub mix: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct SearchResult {
     pub result_id: String,
+    /// The full path as the source shares it.
     pub filename: String,
     pub size_bytes: u64,
     pub duration_ms: Option<u64>,
     pub format: Option<String>,
     pub bitrate_kbps: Option<u32>,
+    /// Who shares it, and how soon they could send it.
+    #[serde(default)]
+    pub username: Option<String>,
+    #[serde(default)]
+    pub free_slot: Option<bool>,
+    #[serde(default)]
+    pub queue_length: Option<u64>,
+    #[serde(default)]
+    pub upload_speed: Option<u64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -117,6 +149,11 @@ pub enum TransferStatus {
 /// Audio acquisition (slskd in milestone 3).
 pub trait Acquirer: Send + Sync {
     fn id(&self) -> &str;
+    /// True when results are made for the exact query (demo and test
+    /// sources), so the matching rule and the user's choice are skipped.
+    fn exact_results(&self) -> bool {
+        false
+    }
     fn search(&self, query: &AcquisitionQuery) -> AdapterResult<Vec<SearchResult>>;
     /// Start a transfer into `dest_dir`. Calling again with the same
     /// idempotency key returns the existing transfer instead of starting a
@@ -129,6 +166,32 @@ pub trait Acquirer: Send + Sync {
     ) -> AdapterResult<String>;
     fn status(&self, transfer_id: &str) -> AdapterResult<TransferStatus>;
     fn cancel(&self, transfer_id: &str) -> AdapterResult<()>;
+}
+
+/// A YouTube video that plausibly is this track, already confirmed to exist.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct VideoMatch {
+    pub video_id: String,
+    pub url: String,
+    pub title: Option<String>,
+    pub channel: Option<String>,
+    pub duration_ms: Option<i64>,
+    pub confidence: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct VideoQuery {
+    pub artist: String,
+    pub title: String,
+    pub mix: Option<String>,
+    /// Known length of the recording, from a local file.
+    pub duration_ms: Option<i64>,
+}
+
+/// Reference links (YouTube in v1). Links are references, never audio sources.
+pub trait VideoLookup: Send + Sync {
+    fn id(&self) -> &str;
+    fn lookup(&self, query: &VideoQuery) -> AdapterResult<Vec<VideoMatch>>;
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

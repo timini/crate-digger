@@ -39,7 +39,11 @@ impl Default for Limits {
                 (kinds::IMPORT.to_string(), 1),
             ]),
             default_concurrency: 1,
-            daily: HashMap::from([(kinds::ACQUIRE.to_string(), 100)]),
+            // A YouTube search costs 100 of the default 10,000 daily API units.
+            daily: HashMap::from([
+                (kinds::ACQUIRE.to_string(), 100),
+                (kinds::YOUTUBE.to_string(), 80),
+            ]),
             storage_kinds: vec![kinds::ACQUIRE.to_string()],
             staging_budget_bytes: 10 * 1024 * 1024 * 1024,
             yield_to_playback: vec![kinds::ANALYSE.to_string()],

@@ -93,6 +93,64 @@ impl Embedding {
         }
         Ok((dot / (na.sqrt() * nb.sqrt())) as f32)
     }
+
+    /// A unit-length copy, so repeated comparisons need only a dot product.
+    pub fn unit(&self) -> UnitEmbedding {
+        let norm = self
+            .vector
+            .iter()
+            .map(|x| (*x as f64).powi(2))
+            .sum::<f64>()
+            .sqrt();
+        let scale = if norm > 0.0 { (1.0 / norm) as f32 } else { 0.0 };
+        UnitEmbedding(Embedding {
+            version: self.version.clone(),
+            vector: self.vector.iter().map(|x| x * scale).collect(),
+        })
+    }
+}
+
+/// A unit-length embedding. Comparison still checks versions.
+#[derive(Debug, Clone, PartialEq)]
+pub struct UnitEmbedding(Embedding);
+
+impl UnitEmbedding {
+    pub fn version(&self) -> &FeatureVersion {
+        &self.0.version
+    }
+
+    /// Cosine similarity with another unit embedding of the same version.
+    pub fn cosine(&self, other: &UnitEmbedding) -> Result<f32, Box<IncompatibleVersions>> {
+        if self.0.version != other.0.version || self.0.vector.len() != other.0.vector.len() {
+            return Err(Box::new(IncompatibleVersions {
+                a: self.0.version.clone(),
+                b: other.0.version.clone(),
+            }));
+        }
+        Ok(self
+            .0
+            .vector
+            .iter()
+            .zip(&other.0.vector)
+            .map(|(a, b)| a * b)
+            .sum())
+    }
+
+    /// The unit mean of several unit embeddings of this version.
+    pub fn centroid(members: &[&UnitEmbedding]) -> Option<UnitEmbedding> {
+        let first = members.first()?;
+        let dims = first.0.vector.len();
+        let mut sum = vec![0f32; dims];
+        for m in members
+            .iter()
+            .filter(|m| m.0.version == first.0.version && m.0.vector.len() == dims)
+        {
+            for (s, v) in sum.iter_mut().zip(&m.0.vector) {
+                *s += v;
+            }
+        }
+        Some(Embedding::new(first.0.version.clone(), sum).unit())
+    }
 }
 
 #[cfg(test)]

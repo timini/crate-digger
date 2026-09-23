@@ -21,9 +21,12 @@ pub mod library;
 pub mod meta;
 pub mod pipeline;
 pub mod playlists;
+pub mod ranking;
+pub mod replenish;
 pub mod review;
 pub mod settings;
 pub mod util;
+pub mod youtube;
 
 pub use error::{Error, Result};
 

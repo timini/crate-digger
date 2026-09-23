@@ -19,6 +19,8 @@ pub mod keys {
     pub const VOLUME: &str = "volume";
     /// Closing the window keeps background work running in the tray.
     pub const CLOSE_TO_TRAY: &str = "close_to_tray";
+    /// Start downloads that meet the calibrated rule without asking. Off by default.
+    pub const UNATTENDED_DOWNLOADS: &str = "unattended_downloads";
 }
 
 /// Resource limits the user controls. Defaults are the product spec's.

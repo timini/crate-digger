@@ -1,6 +1,7 @@
 <script lang="ts">
   import { open } from '@tauri-apps/plugin-dialog'
   import { api, type AppSettings } from '../lib/api'
+  import Connections from './Connections.svelte'
   import Folders from './Folders.svelte'
 
   let { settings, ondone }: { settings: AppSettings; ondone: () => void } = $props()
@@ -52,11 +53,7 @@
       {#if error}<p class="error">{error}</p>{/if}
     {:else}
       <h2>Connections</h2>
-      <p>
-        The AI agent, Soulseek (slskd), discovery seeds and the shared catalogue arrive in later releases. Until then
-        the library, playback, ratings and playlists all work on their own.
-      </p>
-      <p class="muted">You can try the review queue with demo discovery from the Review screen.</p>
+      <Connections />
     {/if}
 
     <footer>
@@ -86,7 +83,9 @@
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: 20px 28px;
-    width: min(640px, 92vw);
+    width: min(740px, 92vw);
+    max-height: 90vh;
+    overflow-y: auto;
   }
   .steps {
     display: flex;
