@@ -109,3 +109,29 @@ Work continues on a new branch `milestone-2` from `milestone-1`. Commits use `ti
 
 - Real "different mixes" coverage in the fixtures is synthetic; the user's library provides the real check in the evaluation.
 - The Windows memory limit uses a Job Object, which CI runs but I cannot test by hand.
+
+## Acceptance status
+
+Status after implementation on branch `milestone-2`. Test names are Rust tests (`cargo test --workspace`) unless marked frontend (`pnpm test` in `app/`).
+
+### #8 Canonical identity and version matching
+
+| Criterion | Evidence | Status |
+| --- | --- | --- |
+| Fixture set covers the same recording across formats and masters, different mixes, edits, pitched copies and unrelated tracks | `crates/core/tests/identity_cases.json` (23 labelled cases) run by `identity_calibration.rs`; results in `docs/identity-calibration.md` | Done |
+| Duplicate copies and conflicting versions follow the identity policy | `identity::policy::tests::*` (every rule), `identity::matching_tests::*` (re-encode merged, remix linked, pitched copy as variant, mislabelled file to review, owned candidate held back) | Done |
+| Merges require recorded evidence; conflict review UI exists | `duplicates::merge` refuses empty evidence; `identity::tests::fingerprint_match_merges_with_recorded_evidence`; Identity screen with frontend `Identity.test.ts` | Done |
+| Title similarity never equals identity; LLM or embedding evidence never merges | `policy::tests::title_similarity_alone_never_proves_identity`, `embedding_and_llm_evidence_never_merge` | Done |
+| Unknown results stay explicit | `policy::tests::missing_information_stays_unknown`, `names_only` calibration cases | Done |
+
+### #9 Analysis worker and model selection
+
+| Criterion | Evidence | Status |
+| --- | --- | --- |
+| Every feature result carries its analysis version and source identity | `feature_record` stores model, weights checksum, preprocessing version, source fingerprint and segment bounds; `analysis::store_tests::stores_features_fingerprint_and_fills_missing_metadata` | Done |
+| Incompatible embeddings cannot enter the same comparison | `Embedding::similarity` checks version and dimension; `analysis::tests::incompatible_versions_are_refused`, `store_tests::upgrade_queues_where_audio_exists_and_marks_the_rest_once` | Done |
+| Analysis failure leaves playback and the UI functional | Separate worker process; `crates/analyzer/tests/worker.rs` (crash, hang, garbage, memory, timeout) including `playback_continues_while_the_worker_crashes` | Done |
+| Temporary audio deletion preserves derived features | `store_tests::clearing_temporary_audio_keeps_features_and_fingerprints` | Done |
+| Missing audio during a model upgrade is visible and does not retry endlessly | `store_tests::upgrade_queues_where_audio_exists_and_marks_the_rest_once` | Done |
+| Model decision record published | `docs/decisions/0001-analysis-model.md`, evaluated on 157 tracks (`docs/evaluation/embeddings-2026-09-23.md`) | Done |
+| Benchmark extraction time and peak memory | `crates/analyzer/examples/bench.rs`; results in the decision record (development machine; reference hardware in #21) | Done |

@@ -384,6 +384,7 @@ export interface ModelStatus {
   dims: number
   installed: boolean
   chosen: boolean
+  recommended: boolean
 }
 
 export const api = {

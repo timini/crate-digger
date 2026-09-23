@@ -63,7 +63,7 @@
         aria-label={`Use ${m.id}`}
       />
       <span class="info">
-        <strong>{m.id}</strong>
+        <strong>{m.id}{#if m.recommended} <span class="rec">Recommended</span>{/if}</strong>
         <span class="muted">{m.dims} dimensions · {formatBytes(m.size_bytes)} · {m.licence}</span>
       </span>
       {#if downloading === m.id}
@@ -93,6 +93,11 @@
   .info {
     flex: 1;
     display: grid;
+  }
+  .rec {
+    font-size: 11px;
+    color: var(--accent);
+    font-weight: 500;
   }
   .small {
     font-size: 12px;

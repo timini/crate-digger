@@ -51,6 +51,7 @@ pub struct ModelStatus {
     dims: usize,
     installed: bool,
     chosen: bool,
+    recommended: bool,
 }
 
 pub fn statuses(conn: &rusqlite::Connection, data_dir: &Path) -> Vec<ModelStatus> {
@@ -64,6 +65,7 @@ pub fn statuses(conn: &rusqlite::Connection, data_dir: &Path) -> Vec<ModelStatus
             dims: m.dims,
             installed: installed(data_dir, m),
             chosen: chosen.as_deref() == Some(m.id),
+            recommended: m.recommended,
         })
         .collect()
 }

@@ -30,6 +30,8 @@ pub struct ModelInfo {
     pub fix_input_shape: bool,
     pub output: &'static str,
     pub dims: usize,
+    /// The pinned choice for ranking (docs/decisions/0001-analysis-model.md).
+    pub recommended: bool,
 }
 
 pub const REGISTRY: &[ModelInfo] = &[
@@ -44,6 +46,7 @@ pub const REGISTRY: &[ModelInfo] = &[
         fix_input_shape: false,
         output: "embeddings",
         dims: 1280,
+        recommended: true,
     },
     ModelInfo {
         id: "msd-musicnn-1",
@@ -56,6 +59,7 @@ pub const REGISTRY: &[ModelInfo] = &[
         fix_input_shape: true,
         output: "embeddings",
         dims: 200,
+        recommended: false,
     },
 ];
 
