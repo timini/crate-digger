@@ -1,0 +1,24 @@
+[package]
+name = "cd-core"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[lib]
+name = "cd_core"
+
+[dependencies]
+blake3 = "1.8.7"
+fail = "0.5.1"
+lofty = "0.25.4"
+rusqlite = { version = "0.40.2", features = ["bundled", "functions"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+thiserror = "2.0.20"
+tracing = "0.1.44"
+unicode-normalization = "0.1.25"
+uuid = { version = "1.26.1", features = ["v7", "serde"] }
+walkdir = "2.5.0"
+
+[dev-dependencies]
+tempfile = "3.27.0"
