@@ -33,7 +33,7 @@ pub struct Side {
 pub enum Evidence {
     /// Byte-identical files.
     IdenticalBytes,
-    /// Chromaprint alignment. `coverage` is the share of the shorter
+    /// Chromaprint alignment. `coverage` is the share of the longer
     /// recording that aligned; `speed` is the playback speed of B relative
     /// to A at which it aligned (1.0 = not pitched).
     FingerprintMatch { score: f64, coverage: f64, speed: f64 },
@@ -242,7 +242,7 @@ pub fn decide(a: &Side, b: &Side, evidence: &[Evidence], t: &Thresholds) -> Deci
             )
         } else {
             format!(
-                "The audio fingerprints match over {:.0}% of the shorter track.",
+                "The audio fingerprints match over {:.0}% of the longer track.",
                 coverage * 100.0
             )
         });

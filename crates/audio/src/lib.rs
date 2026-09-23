@@ -5,8 +5,10 @@
 //! listed in [`SUPPORTED_FORMATS`]; see `docs/formats.md`.
 
 pub mod decode;
+pub mod fingerprint;
 pub mod player;
 mod resample;
+pub mod synth;
 pub mod waveform;
 
 pub use decode::{probe, AudioError, AudioInfo, Decoder, SUPPORTED_FORMATS};

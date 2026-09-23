@@ -1,0 +1,28 @@
+{
+  "comment": "Labelled identity cases. Audio specs: original, remaster, section:FROM-TO, cut:FROM-TO, speed:FACTOR, remix:SEED, file:NAME (in crates/audio/tests/fixtures/identity), none (no audio). Songs are synthetic (crates/audio/src/synth.rs); song N is by 'Fixture Collective' titled 'Song N' unless tags say otherwise.",
+  "cases": [
+    { "name": "re-encode MP3 128", "a": { "song": 1, "audio": "original" }, "b": { "song": 1, "audio": "file:song1-128.mp3" }, "expect": "same_recording" },
+    { "name": "re-encode AAC 96", "a": { "song": 1, "audio": "original" }, "b": { "song": 1, "audio": "file:song1-96.m4a" }, "expect": "same_recording" },
+    { "name": "re-encode MP3 64 mono", "a": { "song": 1, "audio": "file:song1-128.mp3" }, "b": { "song": 1, "audio": "file:song1-64-mono.mp3" }, "expect": "same_recording" },
+    { "name": "re-encode, one side untagged mix", "a": { "song": 1, "audio": "original", "mix": "Original Mix" }, "b": { "song": 1, "audio": "file:song1-96.m4a" }, "expect": "same_recording" },
+    { "name": "remaster", "a": { "song": 2, "audio": "original" }, "b": { "song": 2, "audio": "remaster", "mix": "2021 Remaster" }, "expect": "same_recording" },
+    { "name": "remaster of another song", "a": { "song": 3, "audio": "original" }, "b": { "song": 3, "audio": "remaster" }, "expect": "same_recording" },
+    { "name": "pitched +2%", "a": { "song": 2, "audio": "original" }, "b": { "song": 2, "audio": "speed:1.02" }, "expect": "pitched_copy" },
+    { "name": "pitched -4%", "a": { "song": 3, "audio": "original" }, "b": { "song": 3, "audio": "speed:0.96" }, "expect": "pitched_copy" },
+    { "name": "pitched +8%", "a": { "song": 4, "audio": "original" }, "b": { "song": 4, "audio": "speed:1.08" }, "expect": "pitched_copy" },
+    { "name": "excerpt as radio edit", "a": { "song": 2, "audio": "original", "mix": "Extended Mix" }, "b": { "song": 2, "audio": "section:0.25-0.65", "mix": "Radio Edit" }, "expect": "different_version" },
+    { "name": "excerpt with same tags", "a": { "song": 3, "audio": "original" }, "b": { "song": 3, "audio": "section:0.1-0.5" }, "expect": "different_version" },
+    { "name": "edit with a section removed", "a": { "song": 4, "audio": "original" }, "b": { "song": 4, "audio": "cut:0.4-0.6", "mix": "DJ Tool Edit" }, "expect": "different_version" },
+    { "name": "remix", "a": { "song": 1, "audio": "original" }, "b": { "song": 1, "audio": "remix:7", "mix": "Test Remix" }, "expect": "different_version" },
+    { "name": "remix, other song", "a": { "song": 5, "audio": "original", "mix": "Original Mix" }, "b": { "song": 5, "audio": "remix:3", "mix": "Another Remix" }, "expect": "different_version" },
+    { "name": "unrelated", "a": { "song": 1, "audio": "original" }, "b": { "song": 6, "audio": "original" }, "expect": "unrelated" },
+    { "name": "unrelated, same artist", "a": { "song": 4, "audio": "original" }, "b": { "song": 5, "audio": "original" }, "expect": "unrelated" },
+    { "name": "mislabelled: unrelated audio, same tags", "a": { "song": 1, "audio": "original" }, "b": { "song": 6, "audio": "original", "title": "Song 1" }, "expect": "needs_review" },
+    { "name": "same audio, tags name different mixes", "a": { "song": 1, "audio": "original", "mix": "Original Mix" }, "b": { "song": 1, "audio": "file:song1-128.mp3", "mix": "Extended Mix" }, "expect": "needs_review" },
+    { "name": "same audio, different title", "a": { "song": 1, "audio": "original" }, "b": { "song": 1, "audio": "file:song1-96.m4a", "title": "Totally Different" }, "expect": "needs_review" },
+    { "name": "remix labelled as the original", "a": { "song": 5, "audio": "original" }, "b": { "song": 5, "audio": "remix:9" }, "expect": "needs_review" },
+    { "name": "names only, no audio", "a": { "song": 1, "audio": "none" }, "b": { "song": 1, "audio": "none" }, "expect": "unknown" },
+    { "name": "names only, different mixes", "a": { "song": 1, "audio": "none", "mix": "Dub" }, "b": { "song": 1, "audio": "none", "mix": "Vocal Mix" }, "expect": "different_version" },
+    { "name": "names only, different songs", "a": { "song": 1, "audio": "none" }, "b": { "song": 2, "audio": "none" }, "expect": "unrelated" }
+  ]
+}

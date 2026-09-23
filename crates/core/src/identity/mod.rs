@@ -16,6 +16,25 @@ use crate::util::{new_id, now_ms};
 use crate::{Error, Result};
 use policy::{Decision, Evidence, Relation, Side, Verdict};
 
+/// Below these, a fingerprint comparison is treated as "the audio differs".
+/// Calibrated in tests/identity_calibration.rs.
+pub const MIN_ALIGNMENT_SCORE: f64 = 0.6;
+pub const MIN_ALIGNMENT_COVERAGE: f64 = 0.2;
+
+/// Turn a fingerprint comparison (score and coverage from 0 to 1, and the
+/// speed of B relative to A) into policy evidence.
+pub fn fingerprint_evidence(score: f64, coverage: f64, speed: f64) -> Evidence {
+    if score >= MIN_ALIGNMENT_SCORE && coverage >= MIN_ALIGNMENT_COVERAGE {
+        Evidence::FingerprintMatch {
+            score,
+            coverage,
+            speed,
+        }
+    } else {
+        Evidence::FingerprintMismatch { score }
+    }
+}
+
 /// Everything the policy needs to know about a stored track.
 pub fn side_for_track(conn: &Connection, track_id: &str) -> Result<Side> {
     let m = meta::effective(conn, track_id)?;
