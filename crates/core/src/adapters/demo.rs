@@ -87,7 +87,8 @@ impl DiscoverySource for DemoSource {
         "demo"
     }
 
-    fn discover(&self, _seeds: &[Seed], limit: usize) -> AdapterResult<Vec<CandidateProposal>> {
+    fn discover(&self, request: &DiscoveryRequest) -> AdapterResult<Vec<CandidateProposal>> {
+        let limit = request.limit;
         Ok((0..limit)
             .map(|_| {
                 let n = seed_of(&crate::util::new_id());

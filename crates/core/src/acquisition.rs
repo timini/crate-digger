@@ -65,7 +65,8 @@ fn on_last_attempt(ctx: &JobCtx<'_>) -> bool {
 }
 
 pub struct AcquireHandler {
-    pub acquirer: Arc<dyn Acquirer>,
+    /// Chosen by the job's connector; the first is the default.
+    pub acquirers: Vec<Arc<dyn Acquirer>>,
     pub staging_root: PathBuf,
     pub probe: Arc<dyn AudioProbe>,
     /// How often to check an in-progress transfer.
@@ -79,6 +80,15 @@ impl Handler for AcquireHandler {
 
     fn run(&self, ctx: &mut JobCtx<'_>) -> std::result::Result<(), JobError> {
         let CandidatePayload { candidate_id } = ctx.payload()?;
+        let acquirer = match &ctx.job.connector {
+            None => self.acquirers.first(),
+            Some(c) => self.acquirers.iter().find(|a| a.id() == c),
+        }
+        .ok_or_else(|| JobError::Auth {
+            connector: ctx.job.connector.clone().unwrap_or_default(),
+            message: "No download source is set up yet. Connect Soulseek in Settings.".into(),
+        })?
+        .clone();
         let track_id = candidate_track(ctx.conn, &candidate_id)?;
 
         let checkpoint = match ctx.checkpoint::<AcquireCheckpoint>() {
@@ -90,7 +100,7 @@ impl Handler for AcquireHandler {
                     title: m.title.unwrap_or_default(),
                     mix: m.mix,
                 };
-                let results = self.acquirer.search(&query).map_err(|e| ctx.adapter_error(e))?;
+                let results = acquirer.search(&query).map_err(|e| ctx.adapter_error(e))?;
                 // Candidate selection and the auto-match rule arrive with the
                 // slskd integration (#12); the demo source returns one result.
                 let Some(best) = results.into_iter().next() else {
@@ -101,8 +111,7 @@ impl Handler for AcquireHandler {
                     ));
                 };
                 let dest = self.staging_root.join(&candidate_id);
-                let transfer_id = self
-                    .acquirer
+                let transfer_id = acquirer
                     .enqueue(&best, &ctx.job.idempotency_key, &dest)
                     .map_err(|e| ctx.adapter_error(e))?;
                 let c = AcquireCheckpoint {
@@ -116,8 +125,7 @@ impl Handler for AcquireHandler {
         };
 
         let path = loop {
-            match self
-                .acquirer
+            match acquirer
                 .status(&checkpoint.transfer_id)
                 .map_err(|e| ctx.adapter_error(e))?
             {

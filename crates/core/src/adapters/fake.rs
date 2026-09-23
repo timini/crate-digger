@@ -30,6 +30,7 @@ pub struct FakeSource {
     pub catalogue: Vec<CandidateProposal>,
     cursor: AtomicUsize,
     pub failure: FailureSwitch,
+    pub requests: Mutex<Vec<DiscoveryRequest>>,
 }
 
 impl FakeSource {
@@ -38,6 +39,7 @@ impl FakeSource {
             catalogue,
             cursor: AtomicUsize::new(0),
             failure: FailureSwitch::default(),
+            requests: Mutex::default(),
         }
     }
 
@@ -104,7 +106,9 @@ impl DiscoverySource for FakeSource {
         "fake_source"
     }
 
-    fn discover(&self, _seeds: &[Seed], limit: usize) -> AdapterResult<Vec<CandidateProposal>> {
+    fn discover(&self, request: &DiscoveryRequest) -> AdapterResult<Vec<CandidateProposal>> {
+        let limit = request.limit;
+        self.requests.lock().unwrap().push(request.clone());
         self.failure.check()?;
         let start = self
             .cursor
@@ -324,9 +328,14 @@ mod tests {
     #[test]
     fn fake_source_pages_through_catalogue_and_can_fail() {
         let src = FakeSource::demo();
-        assert_eq!(src.discover(&[], 3).unwrap().len(), 3);
+        let request = DiscoveryRequest {
+            seeds: vec![],
+            limit: 3,
+            input: DiscoveryInput::Seeds,
+        };
+        assert_eq!(src.discover(&request).unwrap().len(), 3);
         src.failure.set(Some(AdapterError::Unavailable("down".into())));
-        assert!(src.discover(&[], 3).is_err());
+        assert!(src.discover(&request).is_err());
     }
 
     #[test]

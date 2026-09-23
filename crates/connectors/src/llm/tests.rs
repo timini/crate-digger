@@ -68,6 +68,7 @@ impl Transport for FakeHttp {
             status: self.status,
             body: self.body.to_string(),
             retry_after_ms: None,
+            location: None,
         })
     }
 }

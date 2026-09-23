@@ -51,6 +51,7 @@
     </select></label>
     <label>Model endpoint <input bind:value={config.llm_endpoint} placeholder="http://localhost:11434/v1" /></label>
     <label>Model name <input bind:value={config.llm_model} placeholder="qwen2.5-coder:latest" /></label>
+    <label class="check"><input type="checkbox" bind:checked={config.enabled} />Discover from seeds and ratings every 6 hours while the app is open</label>
     <label class="check"><input type="checkbox" bind:checked={config.external_slskd} />Use an existing slskd instance</label>
     {#if config.external_slskd}
       <label>slskd endpoint <input bind:value={config.slskd_endpoint} /></label>

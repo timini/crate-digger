@@ -85,6 +85,7 @@ mod tests {
                 status: self.status,
                 body: "{}".into(),
                 retry_after_ms: None,
+                location: None,
             })
         }
     }

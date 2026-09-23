@@ -467,6 +467,17 @@ export interface Connections {
   enabled: boolean
 }
 export interface Seed { kind: 'artist' | 'label' | 'dj' | 'track'; value: string }
+export interface SourceRun {
+  source: string
+  input: string
+  started_at: number
+  finished_at: number
+  outcome: 'found' | 'empty' | 'failed'
+  created: number
+  already_known: number
+  unverified: number
+  detail: string | null
+}
 export const connections = {
   get: () => invoke<Connections>('connections_get'),
   save: (config: Connections) => invoke<void>('connections_save', { config }),
@@ -474,4 +485,7 @@ export const connections = {
   test: (service: string) => invoke<string>('connection_test', { service }),
   seeds: () => invoke<Seed[]>('discovery_seeds'),
   saveSeeds: (seeds: Seed[]) => invoke<void>('discovery_seeds_save', { seeds }),
+  fromPage: (url: string) => invoke<void>('discovery_page', { url }),
+  fromText: (text: string, label: string | null) => invoke<void>('discovery_paste', { text, label }),
+  runs: () => invoke<SourceRun[]>('discovery_runs'),
 }

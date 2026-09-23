@@ -23,10 +23,13 @@ impl Request {
     }
 }
 
+#[derive(Default)]
 pub struct Response {
     pub status: u16,
     pub body: String,
     pub retry_after_ms: Option<u64>,
+    /// Redirect target, returned rather than followed.
+    pub location: Option<String>,
 }
 
 impl Response {
@@ -128,6 +131,11 @@ impl Transport for Http {
             .and_then(|v| v.to_str().ok())
             .and_then(|v| v.parse::<u64>().ok())
             .map(|s| s.saturating_mul(1000).min(3_600_000));
+        let location = response
+            .headers()
+            .get("location")
+            .and_then(|v| v.to_str().ok())
+            .map(str::to_string);
         let body = response
             .body_mut()
             .with_config()
@@ -138,6 +146,7 @@ impl Transport for Http {
             status,
             body,
             retry_after_ms,
+            location,
         })
     }
 }
@@ -164,7 +173,7 @@ mod tests {
             let result = Response {
                 status,
                 body: "secret-token".into(),
-                retry_after_ms: None,
+                ..Default::default()
             }
             .checked();
             assert!(!result.err().unwrap().to_string().contains("secret-token"));

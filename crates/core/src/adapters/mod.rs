@@ -67,10 +67,32 @@ pub struct CandidateProposal {
     pub evidence: Vec<EvidenceProposal>,
 }
 
-/// Tier 1 discovery: turns seeds into candidates with evidence.
+/// Evidence of this kind comes from a model alone and never verifies a candidate.
+pub const LLM_EVIDENCE: &str = "llm";
+
+/// What a discovery run works from.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum DiscoveryInput {
+    /// Expand saved seeds and positively rated tracks.
+    Seeds,
+    /// One public page the user supplied.
+    Page { url: String },
+    /// Text the user pasted, stored as `supplied_text`.
+    Text { supplied_text_id: String, text: String },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct DiscoveryRequest {
+    pub seeds: Vec<Seed>,
+    pub limit: usize,
+    pub input: DiscoveryInput,
+}
+
+/// Tier 1 discovery: turns seeds, pages or pasted text into candidates with evidence.
 pub trait DiscoverySource: Send + Sync {
     fn id(&self) -> &str;
-    fn discover(&self, seeds: &[Seed], limit: usize) -> AdapterResult<Vec<CandidateProposal>>;
+    fn discover(&self, request: &DiscoveryRequest) -> AdapterResult<Vec<CandidateProposal>>;
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

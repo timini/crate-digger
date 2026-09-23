@@ -283,6 +283,16 @@ mod tests {
     }
 
     #[test]
+    fn properties_keep_their_written_order() {
+        let view = person().provider_view().to_string();
+        let order: Vec<usize> = ["\"name\"", "\"kind\"", "\"score\"", "\"tags\""]
+            .iter()
+            .map(|k| view.find(k).unwrap())
+            .collect();
+        assert!(order.windows(2).all(|w| w[0] < w[1]), "{view}");
+    }
+
+    #[test]
     fn any_of_and_const_select_one_form() {
         let s = Schema::new(json!({
             "anyOf": [

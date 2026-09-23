@@ -98,19 +98,17 @@ pub async fn staging_clear(
     Ok(summary)
 }
 
-/// Ask for more candidates. Until real sources exist (#11) this only works
-/// with demo discovery turned on.
+/// Ask for more candidates: demo discovery when it is on, otherwise the
+/// live sources.
 #[tauri::command]
 pub fn review_find_more(state: State<'_, AppState>) -> CmdResult<()> {
     let conn = state.db()?;
-    if !settings::get_or(&conn, settings::keys::DEMO_DISCOVERY, false).map_err(err)? {
-        return Err(
-            "No discovery sources are connected yet. Discogs, tracklists and Soulseek arrive in a later \
-             release; turn on demo discovery in Settings to try reviewing with generated tones."
-                .into(),
-        );
-    }
-    discovery::request_discovery(&conn, DEMO_CONNECTOR, 10, now_ms()).map_err(err)?;
+    let connector = if settings::get_or(&conn, settings::keys::DEMO_DISCOVERY, false).map_err(err)? {
+        DEMO_CONNECTOR
+    } else {
+        cd_connectors::discovery::LIVE_SOURCE
+    };
+    discovery::request_discovery(&conn, connector, 20, now_ms()).map_err(err)?;
     drop(conn);
     state.notify_workers();
     Ok(())

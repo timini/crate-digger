@@ -286,12 +286,9 @@ impl Rig {
     fn new(conn: Connection, acquirer: Arc<dyn crate::adapters::Acquirer>, staging: PathBuf) -> Self {
         let probe: Arc<dyn library::AudioProbe> = Arc::new(RealProbe);
         let handlers: Vec<Arc<dyn Handler>> = vec![
-            Arc::new(DiscoverHandler {
-                source: Arc::new(FakeSource::demo()),
-                acquirer_id: acquirer.id().to_string(),
-            }),
+            Arc::new(DiscoverHandler::new(Arc::new(FakeSource::demo()), acquirer.id())),
             Arc::new(AcquireHandler {
-                acquirer,
+                acquirers: vec![acquirer.clone()],
                 staging_root: staging,
                 probe: probe.clone(),
                 poll: Duration::from_millis(10),

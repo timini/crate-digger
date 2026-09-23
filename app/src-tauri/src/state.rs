@@ -1,5 +1,5 @@
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::{Arc, Mutex, MutexGuard, RwLock};
 
 use cd_audio::{OutputConfig, Player};
 use cd_core::analysis::handler::SwitchableAnalyzer;
@@ -23,6 +23,8 @@ pub struct AppState {
     pub analyzer: Arc<SwitchableAnalyzer>,
     /// OS keychain in the app; tests can substitute an in-memory store.
     pub secrets: Arc<dyn cd_connectors::credentials::SecretStore>,
+    /// Non-secret connection settings, shared with the live discovery source.
+    pub connections: Arc<RwLock<cd_connectors::config::Connections>>,
 }
 
 pub fn archive_dir_setting(conn: &Connection) -> Option<PathBuf> {
@@ -44,6 +46,12 @@ impl AppState {
             tracing::info!(?recovery, "resumed background jobs");
         }
         let scheduler = Arc::new(Scheduler::new(Limits::default(), Arc::new(staged_bytes)));
+        let connections = cd_core::settings::get_or(
+            &conn,
+            crate::commands::connections::CONFIG_KEY,
+            cd_connectors::config::Connections::default(),
+        )
+        .unwrap_or_default();
         let model = crate::models::chosen(&conn, data_dir);
         let analyzer = Arc::new(SwitchableAnalyzer::new(Arc::new(crate::workers::analyzer(model))));
         Ok(AppState {
@@ -58,6 +66,7 @@ impl AppState {
             default_archive_dir,
             analyzer,
             secrets: Arc::new(cd_connectors::credentials::Keychain),
+            connections: Arc::new(RwLock::new(connections)),
         })
     }
 

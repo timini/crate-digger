@@ -1,5 +1,6 @@
 use cd_connectors::config::Connections;
 use cd_connectors::credentials::Credential;
+use cd_connectors::discovery::{LIVE_SOURCE, PAGE_SOURCE};
 use cd_connectors::http::Http;
 use cd_core::adapters::Seed;
 use cd_core::settings;
@@ -17,7 +18,25 @@ pub fn connections_get(state: State<'_, AppState>) -> CmdResult<Connections> {
 #[tauri::command]
 pub fn connections_save(state: State<'_, AppState>, config: Connections) -> CmdResult<()> {
     config.validate().map_err(err)?;
-    settings::set(&*state.db()?, CONFIG_KEY, &config).map_err(err)
+    let conn = state.db()?;
+    settings::set(&conn, CONFIG_KEY, &config).map_err(err)?;
+    *state.connections.write().unwrap() = config;
+    resume_live(&conn);
+    drop(conn);
+    state.notify_workers();
+    Ok(())
+}
+
+/// A changed connection may fix whatever paused live discovery, so let its
+/// jobs try again. They pause again if the problem remains.
+fn resume_live(conn: &rusqlite::Connection) {
+    let _ = cd_core::jobs::set_connector_status(
+        conn,
+        LIVE_SOURCE,
+        cd_core::jobs::ConnectorStatus::Ok,
+        None,
+        cd_core::util::now_ms(),
+    );
 }
 #[tauri::command]
 pub async fn credential_set(
@@ -28,7 +47,10 @@ pub async fn credential_set(
     let secrets = state.secrets.clone();
     tauri::async_runtime::spawn_blocking(move || secrets.set(key, value.as_deref()).map_err(err))
         .await
-        .map_err(err)?
+        .map_err(err)??;
+    resume_live(&*state.db()?);
+    state.notify_workers();
+    Ok(())
 }
 #[tauri::command]
 pub fn discovery_seeds(state: State<'_, AppState>) -> CmdResult<Vec<Seed>> {
@@ -70,4 +92,46 @@ pub async fn connection_test(state: State<'_, AppState>, service: String) -> Cmd
     })
     .await
     .map_err(err)?
+}
+
+/// Discover from one public page the user supplies.
+#[tauri::command]
+pub fn discovery_page(state: State<'_, AppState>, url: String) -> CmdResult<()> {
+    let url = cd_connectors::discovery::pages::public_url(&url).map_err(err)?;
+    let conn = state.db()?;
+    cd_core::discovery::request_input(
+        &conn,
+        PAGE_SOURCE,
+        cd_core::discovery::DiscoveryJob::Page { url: url.to_string() },
+        50,
+        cd_core::util::now_ms(),
+    )
+    .map_err(err)?;
+    drop(conn);
+    state.notify_workers();
+    Ok(())
+}
+
+/// Discover from text the user pastes, for pages that cannot be fetched.
+#[tauri::command]
+pub fn discovery_paste(state: State<'_, AppState>, text: String, label: Option<String>) -> CmdResult<()> {
+    let conn = state.db()?;
+    let now = cd_core::util::now_ms();
+    let id = cd_core::discovery::save_supplied_text(&conn, label.as_deref(), &text, now).map_err(err)?;
+    cd_core::discovery::request_input(
+        &conn,
+        PAGE_SOURCE,
+        cd_core::discovery::DiscoveryJob::Text { supplied_text_id: id },
+        50,
+        now,
+    )
+    .map_err(err)?;
+    drop(conn);
+    state.notify_workers();
+    Ok(())
+}
+
+#[tauri::command]
+pub fn discovery_runs(state: State<'_, AppState>) -> CmdResult<Vec<cd_core::discovery::SourceRun>> {
+    cd_core::discovery::recent_runs(&*state.db()?, 10).map_err(err)
 }

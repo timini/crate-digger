@@ -369,7 +369,7 @@ pub fn record_failure(
 }
 
 fn auth_reason(connector: &str, message: &str) -> String {
-    format!("Paused: {connector} rejected the sign-in ({message}). Fix the connection in Settings to resume.")
+    format!("Paused: {connector} needs attention ({message}). Fix the connection in Settings to resume.")
 }
 
 /// Cancel a job in any unfinished state. A running job notices at its next

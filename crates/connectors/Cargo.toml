@@ -7,7 +7,9 @@ publish.workspace = true
 [dependencies]
 cd-core = { path = "../core" }
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+# preserve_order: schemas reach the model with properties in the order written,
+# which constrained decoding follows (tool before arguments, artist before title).
+serde_json = { version = "1.0", features = ["preserve_order"] }
 ureq = "3.4.2"
 url = "2.5"
 keyring = { version = "=3.6.3", features = ["apple-native", "windows-native", "sync-secret-service", "crypto-rust"] }

@@ -41,6 +41,7 @@ pub fn run() {
             state.start_workers(handlers)?;
             app.manage(state);
             tray::install(app.handle())?;
+            workers::spawn_refresh(app.handle().clone());
 
             // CRATE_DIGGER_SMOKE=1: prove the app starts, then exit cleanly.
             if std::env::var_os("CRATE_DIGGER_SMOKE").is_some() {
@@ -61,6 +62,9 @@ pub fn run() {
             commands::connections::connection_test,
             commands::connections::discovery_seeds,
             commands::connections::discovery_seeds_save,
+            commands::connections::discovery_page,
+            commands::connections::discovery_paste,
+            commands::connections::discovery_runs,
             commands::jobs::activity,
             commands::jobs::jobs_pause_all,
             commands::jobs::jobs_resume_all,

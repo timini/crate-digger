@@ -5,6 +5,7 @@
   import { formatCodec, formatDuration, trackLabel } from '../lib/format'
   import { player, playTrack, seekBy, seekTo } from '../lib/player.svelte'
   import AddToPlaylist from '../components/AddToPlaylist.svelte'
+  import DiscoverFrom from '../components/DiscoverFrom.svelte'
   import Waveform from '../components/Waveform.svelte'
 
   let cards: ReviewCard[] = $state([])
@@ -293,12 +294,16 @@
           <button class="primary" onclick={findMore}>Find more</button>
         {:else}
           <p class="muted">
-            Discovery sources (Discogs, tracklists and Soulseek) arrive in a later release. Demo discovery generates
-            tone recordings so you can try reviewing now. Nothing is downloaded.
+            Find more expands your seeds and ratings through Discogs or your model (set them up in Settings). You can
+            also read a public tracklist page or paste text. Soulseek downloads arrive in a later release; until then
+            new tracks wait in the queue with a reason.
           </p>
-          <button class="primary" onclick={enableDemo}>Try demo discovery</button>
+          <button class="primary" onclick={findMore}>Find more</button>
+          <p class="muted small">Or try demo discovery, which generates tone recordings. Nothing is downloaded.</p>
+          <button onclick={enableDemo}>Try demo discovery</button>
         {/if}
       {/if}
+      {#if !demo}<DiscoverFrom />{/if}
       {#if stats?.skipped}<p class="muted">{stats.skipped} skipped tracks come back next session.</p>{/if}
       <button onclick={undo}>Undo last <kbd>Z</kbd></button>
     </div>

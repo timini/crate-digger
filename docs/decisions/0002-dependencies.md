@@ -22,6 +22,7 @@ Status: recorded for milestones 1 and 2. The code licence for Crate Digger itsel
 | ureq 3 | Downloading models on request; service connectors | MIT OR Apache-2.0 |
 | keyring 3.6.3 | OS credential store (Keychain, Windows Credential Manager, Secret Service) | MIT OR Apache-2.0 |
 | url 2 | Endpoint validation in connectors | MIT OR Apache-2.0 |
+| serde_json `preserve_order` (adds indexmap) | Keeps schema property order for constrained model output | MIT OR Apache-2.0 |
 | walkdir, uuid, serde, unicode-normalization | Utilities | MIT OR Apache-2.0 (walkdir also Unlicense) |
 
 Test-only: fail (Apache-2.0), tempfile, vitest and testing-library (MIT).
