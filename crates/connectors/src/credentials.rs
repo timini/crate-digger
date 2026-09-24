@@ -85,3 +85,78 @@ impl SecretStore for MemoryStore {
         Ok(())
     }
 }
+
+/// Reads each secret from the inner store at most once and keeps it in
+/// memory for the life of the app, so the operating system asks for
+/// keychain permission once per entry per launch rather than on every use.
+/// Failed reads are not cached, so a denied prompt can be retried.
+pub struct CachedStore<S> {
+    inner: S,
+    cache: std::sync::Mutex<std::collections::HashMap<Credential, Option<String>>>,
+}
+
+impl<S: SecretStore> CachedStore<S> {
+    pub fn new(inner: S) -> Self {
+        Self {
+            inner,
+            cache: std::sync::Mutex::default(),
+        }
+    }
+}
+
+impl<S: SecretStore> SecretStore for CachedStore<S> {
+    fn get(&self, key: Credential) -> AdapterResult<Option<String>> {
+        if let Some(v) = self.cache.lock().unwrap().get(&key) {
+            return Ok(v.clone());
+        }
+        let v = self.inner.get(key)?;
+        self.cache.lock().unwrap().insert(key, v.clone());
+        Ok(v)
+    }
+
+    fn set(&self, key: Credential, value: Option<&str>) -> AdapterResult<()> {
+        self.inner.set(key, value)?;
+        let value = value.filter(|v| !v.is_empty()).map(str::to_string);
+        self.cache.lock().unwrap().insert(key, value);
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    use super::*;
+
+    #[derive(Default)]
+    struct Counting {
+        inner: MemoryStore,
+        reads: AtomicUsize,
+    }
+
+    impl SecretStore for Counting {
+        fn get(&self, key: Credential) -> AdapterResult<Option<String>> {
+            self.reads.fetch_add(1, Ordering::SeqCst);
+            self.inner.get(key)
+        }
+        fn set(&self, key: Credential, value: Option<&str>) -> AdapterResult<()> {
+            self.inner.set(key, value)
+        }
+    }
+
+    #[test]
+    fn each_secret_is_read_from_the_keychain_once() {
+        let store = CachedStore::new(Counting::default());
+        store.inner.inner.set(Credential::Discogs, Some("t")).unwrap();
+        for _ in 0..5 {
+            assert_eq!(store.get(Credential::Discogs).unwrap().as_deref(), Some("t"));
+            assert_eq!(store.get(Credential::Youtube).unwrap(), None);
+        }
+        assert_eq!(store.inner.reads.load(Ordering::SeqCst), 2);
+        store.set(Credential::Youtube, Some("k")).unwrap();
+        assert_eq!(store.get(Credential::Youtube).unwrap().as_deref(), Some("k"));
+        store.set(Credential::Youtube, None).unwrap();
+        assert_eq!(store.get(Credential::Youtube).unwrap(), None);
+        assert_eq!(store.inner.reads.load(Ordering::SeqCst), 2);
+    }
+}
