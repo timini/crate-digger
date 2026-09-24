@@ -87,6 +87,13 @@ describe('Review keyboard control', () => {
     expect(sent('review_keep')[0].args).toEqual({ trackId: 't1', keep: true })
   })
 
+  it('W flags the wrong version without rating', async () => {
+    await press('w')
+    await waitFor(() => expect(sent('review_wrong_version')).toHaveLength(1))
+    expect(sent('review_wrong_version')[0].args).toEqual({ trackId: 't1', wrong: true })
+    expect(sent('review_rate')).toHaveLength(0)
+  })
+
   it('P focuses the add-to-playlist control', async () => {
     await press('p')
     expect(document.activeElement?.getAttribute('aria-label')).toBe('Add to playlist')

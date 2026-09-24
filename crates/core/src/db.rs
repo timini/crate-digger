@@ -39,6 +39,11 @@ pub const MIGRATIONS: &[(i64, &str, &str)] = &[
         "similarity_map",
         include_str!("../migrations/0015_similarity_map.sql"),
     ),
+    (
+        16,
+        "evaluation",
+        include_str!("../migrations/0016_evaluation.sql"),
+    ),
 ];
 
 pub fn latest_version() -> i64 {
