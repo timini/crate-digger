@@ -20,6 +20,7 @@ pub mod identity;
 pub mod jobs;
 pub mod library;
 pub mod meta;
+pub mod metadata_lookup;
 pub mod pipeline;
 pub mod playlists;
 pub mod ranking;

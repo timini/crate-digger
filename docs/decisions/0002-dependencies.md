@@ -37,6 +37,14 @@ Test-only: fail (Apache-2.0), tempfile, vitest and testing-library (MIT).
 
 Running an unmodified AGPL program as a separate process and talking to it over HTTP does not make Crate Digger a derivative work, but if a future build bundles or modifies slskd, its source must be offered under AGPL-3.0.
 
+## Data services
+
+| Service | Used for | Terms |
+| --- | --- | --- |
+| AcoustID | Matching library fingerprints to recordings | Free application key for non-commercial use; about 3 requests a second |
+| MusicBrainz | Release, year, label and ISRC of an identified recording | Core data CC0; 1 request a second with a descriptive User-Agent |
+| Discogs | Discovery relationships; genre and label for identified tracks | Personal token; 60 requests a minute; data under the Discogs API terms |
+
 ## Points to settle before release
 
 - **symphonia (MPL-2.0).** File-level copyleft: changes to symphonia's own files must be shared; using it as a library imposes nothing on Crate Digger's code. Compatible with any licence choice.

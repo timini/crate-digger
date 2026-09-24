@@ -13,6 +13,7 @@
     ['discogs', 'Discogs personal token'], ['youtube', 'YouTube Data API key'],
     ['soulseek_username', 'Soulseek username'], ['soulseek_password', 'Soulseek password'],
     ['slskd', 'External slskd API key'],
+    ['acoustid', 'AcoustID application key (for identifying library tracks)'],
   ]
   async function run(action: () => Promise<unknown>, success = 'Saved') {
     busy = true; error = ''; message = ''

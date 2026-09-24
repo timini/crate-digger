@@ -27,6 +27,7 @@ pub mod kinds {
     pub const SYNC: &str = "sync";
     pub const ARCHIVE: &str = "archive";
     pub const YOUTUBE: &str = "youtube";
+    pub const METADATA: &str = "metadata";
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

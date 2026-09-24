@@ -33,6 +33,7 @@ pub const MIGRATIONS: &[(i64, &str, &str)] = &[
         "rating_clear",
         include_str!("../migrations/0013_rating_clear.sql"),
     ),
+    (14, "metadata", include_str!("../migrations/0014_metadata.sql")),
 ];
 
 pub fn latest_version() -> i64 {

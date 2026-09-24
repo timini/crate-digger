@@ -48,6 +48,7 @@ fn resume_live(conn: &rusqlite::Connection) {
         PAGE_SOURCE,
         "youtube",
         cd_connectors::slskd::CONNECTOR,
+        cd_core::metadata_lookup::CONNECTOR,
     ] {
         let _ = cd_core::jobs::set_connector_status(
             conn,
@@ -243,4 +244,44 @@ pub fn unattended_downloads_get(state: State<'_, AppState>) -> CmdResult<bool> {
 #[tauri::command]
 pub fn unattended_downloads_set(state: State<'_, AppState>, enabled: bool) -> CmdResult<()> {
     settings::set(&*state.db()?, settings::keys::UNATTENDED_DOWNLOADS, &enabled).map_err(err)
+}
+
+#[tauri::command]
+pub fn metadata_status(
+    state: State<'_, AppState>,
+    track_id: String,
+) -> CmdResult<Option<cd_core::metadata_lookup::LookupStatus>> {
+    cd_core::metadata_lookup::status(&*state.db()?, &track_id).map_err(err)
+}
+
+/// Look up every analysed track that has not been looked up yet.
+#[tauri::command]
+pub fn metadata_identify_all(state: State<'_, AppState>) -> CmdResult<usize> {
+    let n = cd_core::metadata_lookup::queue_all(&*state.db()?, cd_core::util::now_ms()).map_err(err)?;
+    state.notify_workers();
+    Ok(n)
+}
+
+#[tauri::command]
+pub fn metadata_identify(state: State<'_, AppState>, track_id: String) -> CmdResult<()> {
+    cd_core::metadata_lookup::queue(&*state.db()?, &track_id, true, cd_core::util::now_ms()).map_err(err)?;
+    state.notify_workers();
+    Ok(())
+}
+
+#[tauri::command]
+pub fn metadata_suggestions(
+    state: State<'_, AppState>,
+) -> CmdResult<Vec<cd_core::metadata_lookup::Suggestion>> {
+    cd_core::metadata_lookup::suggestions(&*state.db()?).map_err(err)
+}
+
+#[tauri::command]
+pub fn metadata_accept(state: State<'_, AppState>, id: String) -> CmdResult<()> {
+    cd_core::metadata_lookup::accept(&*state.db()?, &id, cd_core::util::now_ms()).map_err(err)
+}
+
+#[tauri::command]
+pub fn metadata_dismiss(state: State<'_, AppState>, track_id: String) -> CmdResult<()> {
+    cd_core::metadata_lookup::dismiss(&*state.db()?, &track_id, cd_core::util::now_ms()).map_err(err)
 }

@@ -202,11 +202,20 @@ pub fn handlers(state: &AppState) -> Vec<Arc<dyn Handler>> {
                         track,
                         file,
                         &Default::default(),
-                    )
-                    .map(|_| ())
+                    )?;
+                    // With a fingerprint stored, the track can be identified.
+                    cd_core::metadata_lookup::queue(conn, track, false, cd_core::util::now_ms()).map(|_| ())
                 })),
             })
         },
+        Arc::new(cd_core::metadata_lookup::MetadataHandler {
+            lookup: Arc::new(cd_connectors::metadata::MetadataService {
+                secrets: state.secrets.clone(),
+                transport: Arc::new(Http::default()),
+                limiter: Arc::default(),
+                pace: true,
+            }),
+        }),
         Arc::new(ArchiveHandler {
             root: {
                 let default = state.default_archive_dir.clone();

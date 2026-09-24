@@ -225,6 +225,14 @@ impl Discogs {
             .map_err(|_| AdapterError::Invalid("Discogs returned an unexpected response.".into()))
     }
 
+    /// Search results as Discogs returns them, for fields `SearchHit` leaves out.
+    pub fn search_raw(&self, kind: &str, query: &[(&str, &str)]) -> AdapterResult<Vec<Value>> {
+        let mut q = vec![("type", kind), ("per_page", "5")];
+        q.extend_from_slice(query);
+        let v = self.get("/database/search", &q)?;
+        Ok(v["results"].as_array().cloned().unwrap_or_default())
+    }
+
     pub fn search(&self, kind: &str, query: &[(&str, &str)]) -> AdapterResult<Vec<SearchHit>> {
         let mut q = vec![("type", kind), ("per_page", "5")];
         q.extend_from_slice(query);

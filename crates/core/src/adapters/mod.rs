@@ -194,6 +194,36 @@ pub trait VideoLookup: Send + Sync {
     fn lookup(&self, query: &VideoQuery) -> AdapterResult<Vec<VideoMatch>>;
 }
 
+/// What is known about a library track when looking up its metadata.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MetadataQuery {
+    /// Chromaprint values (AcoustID's algorithm) and the track's length.
+    pub fingerprint: Vec<u32>,
+    pub duration_ms: i64,
+    pub artist: Option<String>,
+    pub title: Option<String>,
+}
+
+/// One possible identity for a track, from fingerprint lookup.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Identified {
+    /// AcoustID's match score, 0 to 1.
+    pub score: f64,
+    /// The identified recording's length, when known.
+    pub duration_ms: Option<i64>,
+    /// Field name (as in `domain::Field`) and value, from MusicBrainz.
+    pub fields: Vec<(String, String)>,
+    /// Extra fields from Discogs, such as genre and label.
+    pub discogs_fields: Vec<(String, String)>,
+    /// (source, id), for example ("musicbrainz_recording", "...").
+    pub external_ids: Vec<(String, String)>,
+}
+
+/// Library metadata lookup (AcoustID, MusicBrainz and Discogs in v1).
+pub trait MetadataLookup: Send + Sync {
+    fn lookup(&self, query: &MetadataQuery) -> AdapterResult<Vec<Identified>>;
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SyncAck {
     pub idempotency_key: String,

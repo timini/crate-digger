@@ -10,6 +10,7 @@ pub enum Credential {
     SoulseekUsername,
     SoulseekPassword,
     Slskd,
+    Acoustid,
 }
 
 impl Credential {
@@ -21,6 +22,7 @@ impl Credential {
             Self::SoulseekUsername => "soulseek_username",
             Self::SoulseekPassword => "soulseek_password",
             Self::Slskd => "slskd",
+            Self::Acoustid => "acoustid",
         }
     }
 }

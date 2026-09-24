@@ -39,6 +39,12 @@ pub fn run() {
                     tracing::warn!("could not plan analysis: {e}");
                 }
             }
+            if let Ok(conn) = state.db() {
+                // Tracks analysed before metadata lookup existed.
+                if let Err(e) = cd_core::metadata_lookup::queue_all(&conn, cd_core::util::now_ms()) {
+                    tracing::warn!("could not queue metadata lookups: {e}");
+                }
+            }
             let handlers = workers::handlers(&state);
             state.start_workers(handlers)?;
             app.manage(state);
@@ -77,6 +83,12 @@ pub fn run() {
             commands::connections::youtube_reject,
             commands::connections::youtube_refresh,
             commands::connections::soulseek_status,
+            commands::connections::metadata_status,
+            commands::connections::metadata_identify_all,
+            commands::connections::metadata_identify,
+            commands::connections::metadata_suggestions,
+            commands::connections::metadata_accept,
+            commands::connections::metadata_dismiss,
             commands::connections::soulseek_setup,
             commands::connections::download_choices,
             commands::connections::download_choose,

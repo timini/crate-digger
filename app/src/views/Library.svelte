@@ -7,6 +7,7 @@
   import TrackPanel from '../components/TrackPanel.svelte'
   import RatingControl from '../components/RatingControl.svelte'
   import Duplicates from '../components/Duplicates.svelte'
+  import MetadataCheck from '../components/MetadataCheck.svelte'
 
   const PAGE = 300
 
@@ -183,6 +184,7 @@
       <button onclick={rescan} disabled={roots.length === 0}>Rescan</button>
       <button onclick={checkFiles}>Check files</button>
       <button onclick={() => (showDuplicates = true)}>Duplicates</button>
+      <MetadataCheck onchange={load} />
     </header>
 
     <div class="filters">
