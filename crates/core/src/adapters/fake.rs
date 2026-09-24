@@ -101,6 +101,13 @@ impl FakeSource {
     }
 }
 
+impl FakeSource {
+    /// Start again from the first proposal.
+    pub fn reset(&self) {
+        self.cursor.store(0, Ordering::SeqCst);
+    }
+}
+
 impl DiscoverySource for FakeSource {
     fn id(&self) -> &str {
         "fake_source"
@@ -337,6 +344,7 @@ mod tests {
             seeds: vec![],
             limit: 3,
             input: DiscoveryInput::Seeds,
+            brief: None,
         };
         assert_eq!(src.discover(&request).unwrap().len(), 3);
         src.failure.set(Some(AdapterError::Unavailable("down".into())));

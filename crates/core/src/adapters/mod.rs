@@ -87,6 +87,8 @@ pub struct DiscoveryRequest {
     pub seeds: Vec<Seed>,
     pub limit: usize,
     pub input: DiscoveryInput,
+    /// The brief of the playlist this run is for, if any.
+    pub brief: Option<String>,
 }
 
 /// Tier 1 discovery: turns seeds, pages or pasted text into candidates with evidence.

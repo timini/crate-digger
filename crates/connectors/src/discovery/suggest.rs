@@ -119,6 +119,7 @@ pub fn suggest(
     model: &dyn LlmClient,
     discogs: Option<&Discogs>,
     seeds: &[Seed],
+    brief: Option<&str>,
     limit: usize,
     out: &mut Collector,
 ) -> AdapterResult<()> {
@@ -134,12 +135,20 @@ pub fn suggest(
     } else {
         "Give release_id as null."
     };
-    let task = vec![
+    let fit = if brief.is_some() {
+        " and that fit the playlist brief"
+    } else {
+        ""
+    };
+    let mut task = vec![
         Message::user(format!(
-            "Suggest up to {limit} tracks, not already in the seeds, that a DJ who likes these seeds would want to hear. {how} Explain each choice in one sentence."
+            "Suggest up to {limit} tracks, not already in the seeds, that a DJ who likes these seeds would want to hear{fit}. {how} Explain each choice in one sentence."
         )),
         untrusted("the user's discovery seeds", &seeds_text),
     ];
+    if let Some(b) = brief {
+        task.push(untrusted("the playlist brief", b));
+    }
     let outcome = run(
         model,
         &toolbox,

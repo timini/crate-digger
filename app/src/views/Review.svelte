@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte'
   import { openUrl } from '@tauri-apps/plugin-opener'
-  import { api, type QueueStats, type RatingKind, type ReviewCard } from '../lib/api'
+  import { api, workspace, type Playlist, type QueueStats, type RatingKind, type ReviewCard } from '../lib/api'
+  import { nav, reviewFor } from '../lib/nav.svelte'
   import { formatCodec, formatDuration, trackLabel } from '../lib/format'
   import { player, playTrack, seekBy, seekTo } from '../lib/player.svelte'
   import AddToPlaylist from '../components/AddToPlaylist.svelte'
@@ -25,10 +26,26 @@
   let addToPlaylist: AddToPlaylist | undefined = $state()
 
   const card = $derived(cards[0] ?? null)
+  // Set when reviewing one playlist's suggestions.
+  const forPlaylist = $derived(nav.reviewPlaylist)
+  let playlists: Playlist[] = $state([])
+  const playlistName = $derived(playlists.find((p) => p.id === forPlaylist)?.name ?? 'this playlist')
+  let waiting = $state(0)
+  // Skips in a playlist queue last until you leave it.
+  const skippedHere = new Set<string>()
+  // Z undoes whichever came last: a rating or a playlist decision.
+  let lastUndoable: 'rating' | 'playlist' = 'rating'
 
   async function load() {
     try {
-      let next = await api.reviewNext(5)
+      let next: ReviewCard[]
+      if (forPlaylist) {
+        const all = await workspace.queue(forPlaylist, 50)
+        waiting = all.length
+        next = all.filter((c) => !skippedHere.has(c.track_id)).slice(0, 5)
+      } else {
+        next = await api.reviewNext(5)
+      }
       // After an undo, show the restored track first.
       if (pinned) {
         const i = next.findIndex((c) => c.track_id === pinned)
@@ -89,16 +106,40 @@
   function rate(kind: RatingKind) {
     if (!card) return
     const id = card.track_id
-    once(id, () => api.rate(id, kind), labels[kind])
+    lastUndoable = 'rating'
+    // In a playlist queue the rating is personal; the card stays until you decide on the playlist.
+    once(id, () => api.rate(id, kind), forPlaylist ? `${labels[kind]}. Now add it or say it does not fit.` : labels[kind])
   }
 
   function skip() {
     if (!card) return
     const id = card.track_id
+    if (forPlaylist) {
+      skippedHere.add(id)
+      act(async () => {}, 'Skipped')
+      return
+    }
     once(id, () => api.skip(id), 'Skipped for this session')
   }
 
+  function decide(verdict: 'fits' | 'not_for_this') {
+    if (!card || !forPlaylist) return
+    const id = card.track_id
+    const pid = forPlaylist
+    lastUndoable = 'playlist'
+    once(id, () => workspace.feedback(pid, id, verdict), verdict === 'fits' ? `Added to ${playlistName}` : `Not for ${playlistName}`)
+  }
+
   function undo() {
+    if (forPlaylist && lastUndoable === 'playlist') {
+      const pid = forPlaylist
+      act(async () => {
+        const t = await workspace.undo(pid)
+        if (!t) throw new Error('Nothing to undo in this playlist')
+        pinned = t
+      }, 'Undone')
+      return
+    }
     act(async () => {
       const u = await api.undo()
       if (!u) throw new Error('Nothing to undo in this session')
@@ -122,7 +163,8 @@
 
   async function findMore() {
     try {
-      await api.findMore()
+      if (forPlaylist) await workspace.discoverNow(forPlaylist)
+      else await api.findMore()
       say('Looking for more tracks. They appear here once audio is ready.')
     } catch (e) {
       error = String(e)
@@ -150,6 +192,8 @@
       z: undo,
       k: toggleKeep,
       w: toggleWrongVersion,
+      a: () => decide('fits'),
+      n: () => decide('not_for_this'),
       p: () => addToPlaylist?.focus(),
       arrowleft: () => seekBy(-10_000),
       arrowright: () => seekBy(10_000),
@@ -181,9 +225,17 @@
   }
 
   let timer: ReturnType<typeof setInterval> | undefined
+  // Load again whenever the queue switches between everything and a playlist.
+  $effect(() => {
+    void forPlaylist
+    skippedHere.clear()
+    lastUndoable = 'rating'
+    void load()
+  })
+
   onMount(async () => {
     demo = await api.demoDiscovery()
-    await load()
+    playlists = await api.playlists().catch(() => [])
     timer = setInterval(() => {
       if (!card) load()
       else api.reviewStats().then((s) => (stats = s))
@@ -196,8 +248,14 @@
 
 <section class="review">
   <header>
-    <h2>Review</h2>
-    {#if stats}
+    {#if forPlaylist}
+      <h2>Suggestions for {playlistName}</h2>
+      <span class="muted">{waiting} waiting</span>
+      <button onclick={() => reviewFor(null)}>All discovery</button>
+    {:else}
+      <h2>Discovery</h2>
+    {/if}
+    {#if stats && !forPlaylist}
       <span class="muted">
         {stats.ready} ready · {stats.in_progress} on the way
         {#if stats.skipped}· {stats.skipped} skipped this session{/if}
@@ -205,7 +263,7 @@
         {#if stats.failed}· {stats.failed} failed{/if}
       </span>
     {/if}
-    <button class="more" onclick={findMore}>Find more</button>
+    <button class="more" onclick={findMore}>{forPlaylist ? 'Find more for this playlist' : 'Find more'}</button>
   </header>
 
   {#if error}<p class="error">{error}</p>{/if}
@@ -233,6 +291,14 @@
           <div class="muted">
             {[card.meta.label, card.meta.release, card.meta.year].filter(Boolean).join(' · ')}
           </div>
+          {#if card.suggested_for.length}
+            <div class="contexts small">
+              Suggested for:
+              {#each card.suggested_for as [pid, name]}
+                <button class="chip" class:current={pid === forPlaylist} onclick={() => reviewFor(pid)}>{name}</button>
+              {/each}
+            </div>
+          {/if}
         </div>
       </div>
 
@@ -253,6 +319,11 @@
         <button onclick={skip}>Skip <kbd>S</kbd></button>
         <button onclick={undo}>Undo <kbd>Z</kbd></button>
         <button onclick={toggleKeep} class:on={card.kept}>{card.kept ? 'Kept' : 'Keep'} <kbd>K</kbd></button>
+        {#if forPlaylist}
+          <span class="sep"></span>
+          <button class="primary" onclick={() => decide('fits')}>Add to {playlistName} <kbd>A</kbd></button>
+          <button onclick={() => decide('not_for_this')}>Not for this playlist <kbd>N</kbd></button>
+        {/if}
         <button onclick={toggleWrongVersion} class:on={card.wrong_version} aria-pressed={card.wrong_version}
           title="The audio is a different mix, edit or take from the one described (W)">Wrong version <kbd>W</kbd></button>
       </div>
@@ -266,6 +337,9 @@
       <div class="details">
         <div>
           <h4>Why this track</h4>
+          {#if card.playlist_fit}
+            {#each card.playlist_fit.reasons as r}<p>{r}</p>{/each}
+          {/if}
           {#each card.reasons as r}<p>{r}</p>{:else}<p class="muted">No reason recorded.</p>{/each}
           {#if card.confidence != null}<p class="muted small">Match confidence {Math.round(card.confidence * 100)}%{card.verified ? '' : ' · unverified'}</p>{/if}
         </div>
@@ -450,4 +524,7 @@
     margin: 80px auto;
     max-width: 480px;
   }
+  .contexts { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
+  .chip { padding: 1px 8px; font-size: 12px; border-radius: 10px; }
+  .chip.current { border-color: var(--accent); }
 </style>

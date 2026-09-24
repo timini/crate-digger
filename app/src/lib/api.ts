@@ -273,6 +273,8 @@ export interface NowPlaying {
 export interface Playlist {
   id: string
   name: string
+  brief: string
+  discovery: boolean
   track_count: number
   duration_ms: number
   created_at: number
@@ -333,6 +335,8 @@ export interface ReviewCard {
   kept: boolean
   wrong_version: boolean
   playlists: [string, string][]
+  suggested_for: [string, string][]
+  playlist_fit: { playlist_id: string; name: string; reasons: string[] } | null
 }
 
 export interface QueueStats {
@@ -550,6 +554,7 @@ export interface SourceRun {
   already_known: number
   unverified: number
   detail: string | null
+  playlist_id?: string | null
 }
 export const connections = {
   get: () => invoke<Connections>('connections_get'),
@@ -652,4 +657,17 @@ export interface PilotReport {
 export const pilot = {
   report: () => invoke<PilotReport>('evaluation_report'),
   save: (path: string) => invoke<void>('evaluation_save', { path }),
+}
+export interface WorkspaceInfo { seeds: Seed[]; ready: number; runs: SourceRun[] }
+export type Verdict = 'fits' | 'not_for_this'
+export const workspace = {
+  get: (id: string) => invoke<WorkspaceInfo>('playlist_workspace', { id }),
+  readyCounts: () => invoke<Record<string, number>>('playlist_ready_counts'),
+  setBrief: (id: string, brief: string) => invoke<void>('playlist_brief_set', { id, brief }),
+  saveSeeds: (id: string, seeds: Seed[]) => invoke<void>('playlist_seeds_save', { id, seeds }),
+  setDiscovery: (id: string, on: boolean) => invoke<void>('playlist_discovery_set', { id, on }),
+  discoverNow: (id: string) => invoke<void>('playlist_discover_now', { id }),
+  queue: (id: string, limit: number) => invoke<ReviewCard[]>('playlist_queue', { id, limit }),
+  feedback: (id: string, trackId: string, verdict: Verdict) => invoke<void>('playlist_feedback', { id, trackId, verdict }),
+  undo: (id: string) => invoke<string | null>('playlist_feedback_undo', { id }),
 }

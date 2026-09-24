@@ -353,9 +353,14 @@ impl DiscoverySource for LiveSource {
                     let wanted = request.limit.saturating_sub(out.len()).min(10);
                     if wanted > 0 {
                         // Model failures do not discard what Discogs found.
-                        if let Err(e) =
-                            suggest::suggest(m.as_ref(), discogs.as_ref(), &seeds, wanted, &mut out)
-                        {
+                        if let Err(e) = suggest::suggest(
+                            m.as_ref(),
+                            discogs.as_ref(),
+                            &seeds,
+                            request.brief.as_deref(),
+                            wanted,
+                            &mut out,
+                        ) {
                             if out.is_empty() {
                                 return Err(discogs_error.unwrap_or(e));
                             }

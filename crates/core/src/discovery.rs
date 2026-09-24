@@ -29,6 +29,8 @@ pub struct IngestSummary {
     pub unverified: usize,
     /// Existing unverified candidates that new evidence has now verified.
     pub newly_verified: Vec<String>,
+    /// Existing candidates this run proposed again.
+    pub matched: Vec<String>,
 }
 
 /// Does a track with this artist, title and mix exist already? Title
@@ -122,6 +124,7 @@ pub fn ingest(
                 .optional()?;
             if let Some((candidate_id, was_verified)) = existing {
                 add_evidence(&tx, &candidate_id, p, now)?;
+                summary.matched.push(candidate_id.clone());
                 if verified && !was_verified {
                     tx.execute(
                         "UPDATE candidate SET verified = 1, confidence = MAX(COALESCE(confidence, 0), ?2),
@@ -311,13 +314,16 @@ pub struct SourceRun {
     pub already_known: i64,
     pub unverified: i64,
     pub detail: Option<String>,
+    /// The playlist the run was for, if any.
+    #[serde(default)]
+    pub playlist_id: Option<String>,
 }
 
 fn record_run(conn: &Connection, run: &SourceRun) -> Result<()> {
     conn.execute(
         "INSERT INTO source_run (id, source, input, started_at, finished_at, outcome, created,
-                                 already_known, unverified, detail)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+                                 already_known, unverified, detail, playlist_id)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
         params![
             new_id(),
             run.source,
@@ -328,7 +334,8 @@ fn record_run(conn: &Connection, run: &SourceRun) -> Result<()> {
             run.created,
             run.already_known,
             run.unverified,
-            run.detail
+            run.detail,
+            run.playlist_id
         ],
     )?;
     Ok(())
@@ -336,7 +343,8 @@ fn record_run(conn: &Connection, run: &SourceRun) -> Result<()> {
 
 pub fn recent_runs(conn: &Connection, limit: i64) -> Result<Vec<SourceRun>> {
     let mut stmt = conn.prepare(
-        "SELECT source, input, started_at, finished_at, outcome, created, already_known, unverified, detail
+        "SELECT source, input, started_at, finished_at, outcome, created, already_known, unverified, detail,
+                playlist_id
          FROM source_run ORDER BY finished_at DESC, rowid DESC LIMIT ?1",
     )?;
     let rows = stmt
@@ -351,6 +359,7 @@ pub fn recent_runs(conn: &Connection, limit: i64) -> Result<Vec<SourceRun>> {
                 already_known: r.get(6)?,
                 unverified: r.get(7)?,
                 detail: r.get(8)?,
+                playlist_id: r.get(9)?,
             })
         })?
         .collect::<std::result::Result<Vec<_>, _>>()?;
@@ -370,7 +379,7 @@ pub fn refresh_due(conn: &Connection, connector: &str, interval_ms: i64, now: i6
         return Ok(false);
     }
     let last: Option<i64> = conn.query_row(
-        "SELECT MAX(started_at) FROM source_run WHERE source = ?1 AND input = ?2",
+        "SELECT MAX(started_at) FROM source_run WHERE source = ?1 AND input = ?2 AND playlist_id IS NULL",
         params![connector, DiscoveryJob::Seeds.describe()],
         |r| r.get(0),
     )?;
@@ -382,6 +391,10 @@ struct DiscoverPayload {
     limit: usize,
     #[serde(default)]
     input: DiscoveryJob,
+    /// A run for one playlist uses its brief and seeds, and its results
+    /// are suggested for that playlist.
+    #[serde(default)]
+    playlist: Option<String>,
 }
 
 /// A discovery source and the acquirer its verified candidates go to.
@@ -435,10 +448,25 @@ impl Handler for DiscoverHandler {
         }
         .ok_or_else(|| JobError::Fatal("This discovery source is not available.".into()))?;
         let started_at = ctx.now();
+        // A playlist deleted since the run was queued has nothing to discover for.
+        let playlist = match &payload.playlist {
+            Some(p) => match crate::workspace::brief(ctx.conn, p)? {
+                Some(brief) => Some((p.clone(), brief)),
+                None => return Err(JobError::Fatal("The playlist no longer exists.".into())),
+            },
+            None => None,
+        };
         let request = DiscoveryRequest {
-            seeds: seeds_for_run(ctx.conn)?,
+            seeds: match &playlist {
+                Some((p, _)) => crate::workspace::seeds_for_run(ctx.conn, p)?,
+                None => seeds_for_run(ctx.conn)?,
+            },
             limit: payload.limit,
             input: payload.input.resolve(ctx.conn)?,
+            brief: playlist
+                .as_ref()
+                .map(|(_, b)| b.clone())
+                .filter(|b| !b.is_empty()),
         };
         let mut run = SourceRun {
             source: route.source.id().to_string(),
@@ -450,6 +478,7 @@ impl Handler for DiscoverHandler {
             already_known: 0,
             unverified: 0,
             detail: None,
+            playlist_id: playlist.as_ref().map(|(p, _)| p.clone()),
         };
         let proposals = match route.source.discover(&request) {
             Ok(p) => p,
@@ -486,6 +515,11 @@ impl Handler for DiscoverHandler {
         for id in &summary.newly_verified {
             if pipeline::state(ctx.conn, id)?.stage == Stage::Identified {
                 queue_acquisition(ctx.conn, id, &route.acquirer_id, now)?;
+            }
+        }
+        if let Some((p, _)) = &playlist {
+            for id in summary.created.iter().chain(&summary.matched) {
+                crate::workspace::add_context(ctx.conn, id, p, now)?;
             }
         }
         run.finished_at = now;

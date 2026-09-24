@@ -18,7 +18,7 @@ Everything runs on your computer. The AI model can be local (Ollama, LM Studio) 
 - **Analysis**: tempo, key, loudness and a pretrained music embedding, computed in a separate process.
 - **Ranking**: taste clusters from your ratings, with dislikes, source evidence and 20% exploration.
 - **YouTube references**: confirmed video links you can correct.
-- **Playlists**: ordered playlists with M3U8 and Rekordbox XML export.
+- **Playlists**: where discovery starts. Each playlist has a brief, its own seeds and its own queue of suggestions; you add tracks or say they do not fit, separately from your personal ratings. Your order is never changed for you. Export to M3U8 and Rekordbox XML.
 - **Shared catalogue (optional)**: sign in with Google to back up your ratings and playlists, and, if you choose, share identified tracks and reuse analyses others agree on. The [service](https://github.com/timini/crate-digger-service) is built but not yet hosted.
 - **Pilot report**: a local report comparing ranking with and without your taste, for the [pilot evaluation](docs/pilot-evaluation.md).
 
@@ -43,7 +43,7 @@ Credentials are kept in the operating system's credential store, never in that f
 - Milestone plans with acceptance evidence: [1](docs/milestone-1-plan.md), [2](docs/milestone-2-plan.md), [3](docs/milestone-3-plan.md), [4](docs/milestone-4-plan.md)
 - Calibration reports: [identity](docs/identity-calibration.md), [download matching](docs/acquisition-calibration.md), [ranking](docs/ranking-calibration.md)
 - Decisions: [analysis model](docs/decisions/0001-analysis-model.md), [dependencies and licences](docs/decisions/0002-dependencies.md), [central service](docs/decisions/0003-central-service.md)
-- [Library map](docs/library-map.md), [pilot evaluation protocol](docs/pilot-evaluation.md), [release checklist](docs/release-checklist.md)
+- [Playlist workspaces](docs/playlist-workspaces.md), [library map](docs/library-map.md), [pilot evaluation protocol](docs/pilot-evaluation.md), [release checklist](docs/release-checklist.md)
 
 ## Development
 

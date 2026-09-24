@@ -424,6 +424,7 @@ fn model_suggestions_are_verified_only_when_discogs_confirms_them() {
         &model,
         Some(&d),
         &[seed(SeedKind::Artist, "Seed Artist")],
+        Some("Warm-up: dubby and spacious"),
         5,
         &mut out,
     )
@@ -456,6 +457,7 @@ fn live_source_needs_a_connection_for_seeds_but_not_for_pasted_text() {
         seeds: vec![seed(SeedKind::Artist, "Seed Artist")],
         limit: 10,
         input: DiscoveryInput::Seeds,
+        brief: None,
     };
     assert!(matches!(source.discover(&seeds), Err(AdapterError::Invalid(_))));
     let pasted = DiscoveryRequest {
@@ -465,6 +467,7 @@ fn live_source_needs_a_connection_for_seeds_but_not_for_pasted_text() {
             supplied_text_id: "t".into(),
             text: "Alpha Unit - First Light".into(),
         },
+        brief: None,
     };
     assert_eq!(source.discover(&pasted).unwrap().len(), 1);
 

@@ -32,6 +32,7 @@ pub mod settings;
 pub mod sharing;
 pub mod similarity;
 pub mod util;
+pub mod workspace;
 pub mod youtube;
 
 pub use error::{Error, Result};

@@ -15,6 +15,10 @@ use crate::{Error, Result};
 pub struct Playlist {
     pub id: String,
     pub name: String,
+    /// What the playlist is for, in the user's words.
+    pub brief: String,
+    /// The app looks for tracks for this playlist in the background.
+    pub discovery: bool,
     pub track_count: i64,
     pub duration_ms: i64,
     pub created_at: i64,
@@ -88,7 +92,8 @@ pub fn list(conn: &Connection) -> Result<Vec<Playlist>> {
                 (SELECT COUNT(*) FROM playlist_entry e WHERE e.playlist_id = p.id),
                 (SELECT COALESCE(SUM(f.duration_ms), 0) FROM playlist_entry e
                    JOIN audio_file f ON f.track_id = e.track_id AND f.is_primary = 1
-                  WHERE e.playlist_id = p.id)
+                  WHERE e.playlist_id = p.id),
+                p.brief, p.discovery
          FROM playlist p ORDER BY p.name COLLATE NOCASE, p.created_at",
     )?;
     let rows = stmt
@@ -100,6 +105,8 @@ pub fn list(conn: &Connection) -> Result<Vec<Playlist>> {
                 updated_at: r.get(3)?,
                 track_count: r.get(4)?,
                 duration_ms: r.get(5)?,
+                brief: r.get(6)?,
+                discovery: r.get(7)?,
             })
         })?
         .collect::<std::result::Result<Vec<_>, _>>()?;
@@ -139,7 +146,7 @@ pub fn entries(conn: &Connection, id: &str) -> Result<Vec<PlaylistEntry>> {
     Ok(rows)
 }
 
-fn track_ids(conn: &Connection, id: &str) -> Result<Vec<String>> {
+pub fn track_ids(conn: &Connection, id: &str) -> Result<Vec<String>> {
     let mut stmt =
         conn.prepare("SELECT track_id FROM playlist_entry WHERE playlist_id = ?1 ORDER BY position")?;
     let ids = stmt
@@ -149,8 +156,15 @@ fn track_ids(conn: &Connection, id: &str) -> Result<Vec<String>> {
 }
 
 /// Replace a playlist's entries with `order`, numbering from zero.
+/// Rewrites a playlist's entries. Joins the caller's transaction if one is
+/// open, so it can be part of a larger change.
 fn write_order(conn: &Connection, id: &str, order: &[String]) -> Result<()> {
-    let tx = conn.unchecked_transaction()?;
+    let own = if conn.is_autocommit() {
+        Some(conn.unchecked_transaction()?)
+    } else {
+        None
+    };
+    let tx: &Connection = own.as_deref().unwrap_or(conn);
     let added: Vec<(String, i64)> = {
         let mut stmt = tx.prepare(
             "SELECT track_id, added_at FROM playlist_entry WHERE playlist_id = ?1 ORDER BY position",
@@ -179,8 +193,10 @@ fn write_order(conn: &Connection, id: &str, order: &[String]) -> Result<()> {
             params![id, pos as i64, track, added_at],
         )?;
     }
-    touch(&tx, id)?;
-    tx.commit()?;
+    touch(tx, id)?;
+    if let Some(own) = own {
+        own.commit()?;
+    }
     Ok(())
 }
 
