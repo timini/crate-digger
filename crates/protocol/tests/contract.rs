@@ -124,7 +124,10 @@ fn pinned<T: Serialize + DeserializeOwned + PartialEq + std::fmt::Debug>(name: &
     if std::env::var("UPDATE_CONTRACT").is_ok() {
         std::fs::write(&path, &text).unwrap();
     }
-    let expected = std::fs::read_to_string(&path).unwrap_or_default();
+    // A checkout may have converted line endings; the contract is the content.
+    let expected = std::fs::read_to_string(&path)
+        .unwrap_or_default()
+        .replace("\r\n", "\n");
     assert_eq!(text, expected, "{name}: the v1 wire format changed");
     let back: T = serde_json::from_str(&serde_json::to_string(value).unwrap()).unwrap();
     assert_eq!(&back, value);
