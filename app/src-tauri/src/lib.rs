@@ -142,6 +142,7 @@ pub fn run() {
             commands::analysis::model_choose,
             commands::review::demo_discovery_get,
             commands::review::queue_health,
+            commands::review::library_rate,
             commands::review::demo_discovery_set,
         ])
         .on_window_event(|window, event| {

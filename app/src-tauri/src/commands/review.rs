@@ -152,3 +152,17 @@ pub fn queue_health(state: State<'_, AppState>) -> CmdResult<QueueHealth> {
         .map_err(err)?,
     })
 }
+
+/// Set, change or clear (`None`) the rating of any track, from the Library.
+#[tauri::command]
+pub fn library_rate(state: State<'_, AppState>, track_id: String, kind: Option<RatingKind>) -> CmdResult<()> {
+    let conn = state.db()?;
+    match kind {
+        Some(k) => review::rate(&conn, &track_id, k, &state.session_id, now_ms()).map(|_| ()),
+        None => review::clear(&conn, &track_id, &state.session_id, now_ms()).map(|_| ()),
+    }
+    .map_err(err)?;
+    drop(conn);
+    after_preference_change(&state);
+    Ok(())
+}

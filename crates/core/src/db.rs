@@ -28,6 +28,11 @@ pub const MIGRATIONS: &[(i64, &str, &str)] = &[
     ),
     (11, "ranking", include_str!("../migrations/0011_ranking.sql")),
     (12, "buffer", include_str!("../migrations/0012_buffer.sql")),
+    (
+        13,
+        "rating_clear",
+        include_str!("../migrations/0013_rating_clear.sql"),
+    ),
 ];
 
 pub fn latest_version() -> i64 {

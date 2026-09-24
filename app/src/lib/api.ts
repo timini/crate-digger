@@ -463,6 +463,7 @@ export const api = {
   downloadModel: (id: string) => invoke<void>('model_download', { id }),
   downloadProgress: () => invoke<{ id: string; bytes: number } | null>('model_download_progress'),
   chooseModel: (id: string | null) => invoke<void>('model_choose', { id }),
+  libraryRate: (trackId: string, kind: RatingKind | null) => invoke<void>('library_rate', { trackId, kind }),
 }
 
 export interface Connections {
