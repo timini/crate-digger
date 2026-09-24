@@ -13,6 +13,10 @@ pub struct Connections {
     /// Where an external slskd saves finished downloads.
     pub slskd_downloads_dir: String,
     pub enabled: bool,
+    /// The central catalogue service, once deployed.
+    pub central_endpoint: String,
+    /// The app's Google OAuth client id (desktop type) for catalogue sign-in.
+    pub google_client_id: String,
 }
 impl Default for Connections {
     fn default() -> Self {
@@ -24,6 +28,8 @@ impl Default for Connections {
             external_slskd: false,
             slskd_downloads_dir: String::new(),
             enabled: false,
+            central_endpoint: String::new(),
+            google_client_id: String::new(),
         }
     }
 }
@@ -31,6 +37,12 @@ impl Connections {
     pub fn validate(&self) -> AdapterResult<()> {
         crate::http::endpoint(&self.llm_endpoint)?;
         crate::http::endpoint(&self.slskd_endpoint)?;
+        if !self.central_endpoint.is_empty() {
+            crate::http::endpoint(&self.central_endpoint)?;
+        }
+        if self.google_client_id.len() > 200 {
+            return Err(AdapterError::Invalid("The Google client id is too long.".into()));
+        }
         if !matches!(self.llm_provider.as_str(), "openai_compatible" | "anthropic") {
             return Err(AdapterError::Invalid("Choose a supported model provider.".into()));
         }

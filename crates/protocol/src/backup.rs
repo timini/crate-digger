@@ -32,6 +32,20 @@ pub struct Track {
     pub metadata: Metadata,
     pub fingerprint_hash: Option<String>,
     pub kept: bool,
+    /// The track's audio file as it was, so restore can find it again.
+    #[serde(default)]
+    pub file: Option<FileRef>,
+}
+
+/// Enough to recognise the user's own file after a move: its name, size,
+/// content hash and length. Never shared; only in the owner's backups.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FileRef {
+    pub name: String,
+    pub size_bytes: u64,
+    pub content_hash: String,
+    pub duration_ms: Option<i64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -90,6 +104,17 @@ impl Validate for Snapshot {
             return bad(
                 "unknown_track",
                 "ratings and playlists may only refer to tracks in the snapshot",
+            );
+        }
+        if self.tracks.iter().filter_map(|t| t.file.as_ref()).any(|f| {
+            f.name.is_empty()
+                || f.name.contains(['/', '\\'])
+                || f.name.len() > 255
+                || f.content_hash.len() > 128
+        }) {
+            return bad(
+                "file_ref",
+                "file references are a bare file name, a size and a hash",
             );
         }
         if self

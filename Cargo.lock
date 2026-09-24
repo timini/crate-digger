@@ -627,6 +627,7 @@ name = "cd-connectors"
 version = "0.1.0"
 dependencies = [
  "cd-core",
+ "cd-protocol",
  "keyring",
  "rusty-chromaprint",
  "serde",
@@ -645,6 +646,7 @@ version = "0.1.0"
 dependencies = [
  "blake3",
  "cd-audio",
+ "cd-protocol",
  "fail",
  "libc",
  "lofty",
@@ -903,6 +905,7 @@ dependencies = [
  "cd-audio",
  "cd-connectors",
  "cd-core",
+ "cd-protocol",
  "rusqlite",
  "serde",
  "serde_json",
@@ -913,6 +916,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "ureq",
+ "uuid",
 ]
 
 [[package]]

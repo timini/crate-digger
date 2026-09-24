@@ -11,6 +11,7 @@ pub mod acquisition;
 pub mod adapters;
 pub mod analysis;
 pub mod archive;
+pub mod backup;
 pub mod db;
 pub mod discovery;
 pub mod domain;
@@ -27,6 +28,7 @@ pub mod ranking;
 pub mod replenish;
 pub mod review;
 pub mod settings;
+pub mod sharing;
 pub mod util;
 pub mod youtube;
 

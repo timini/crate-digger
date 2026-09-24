@@ -1,4 +1,5 @@
 //! Network and credential boundaries. The domain crate stays offline.
+pub mod central;
 pub mod config;
 pub mod credentials;
 pub mod discovery;

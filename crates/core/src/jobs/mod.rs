@@ -28,6 +28,7 @@ pub mod kinds {
     pub const ARCHIVE: &str = "archive";
     pub const YOUTUBE: &str = "youtube";
     pub const METADATA: &str = "metadata";
+    pub const FEATURE_REUSE: &str = "feature_reuse";
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

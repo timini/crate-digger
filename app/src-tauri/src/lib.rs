@@ -1,3 +1,4 @@
+mod central;
 mod commands;
 mod models;
 mod probe;
@@ -82,6 +83,14 @@ pub fn run() {
             commands::connections::youtube_prefer,
             commands::connections::youtube_reject,
             commands::connections::youtube_refresh,
+            commands::central::central_status,
+            commands::central::central_sign_in,
+            commands::central::central_sign_out,
+            commands::central::sharing_set,
+            commands::central::backup_now,
+            commands::central::backups_list,
+            commands::central::backup_restore,
+            commands::central::backup_delete,
             commands::connections::soulseek_status,
             commands::connections::metadata_status,
             commands::connections::metadata_identify_all,

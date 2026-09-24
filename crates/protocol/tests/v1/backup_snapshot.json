@@ -23,6 +23,12 @@
   ],
   "tracks": [
     {
+      "file": {
+        "content_hash": "b3:5d1c",
+        "duration_ms": 392000,
+        "name": "01 House Is House.flac",
+        "size_bytes": 41234567
+      },
       "fingerprint_hash": "fp:3f9a0c12",
       "id": "t1",
       "kept": true,

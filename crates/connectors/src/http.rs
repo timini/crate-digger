@@ -10,6 +10,8 @@ pub struct Request {
     pub url: String,
     pub headers: Vec<(String, String)>,
     pub body: Option<Value>,
+    /// Sent as `application/x-www-form-urlencoded` instead of JSON.
+    pub form: Option<Vec<(String, String)>>,
 }
 
 impl Request {
@@ -19,6 +21,7 @@ impl Request {
             url: url.into(),
             headers: vec![],
             body: None,
+            form: None,
         }
     }
 }
@@ -108,13 +111,20 @@ impl Transport for Http {
         for (name, value) in request.headers {
             builder = builder.header(name, value);
         }
-        let bytes = match request.body {
-            Some(body) => {
+        let bytes = match (request.body, request.form) {
+            (_, Some(form)) => {
+                builder = builder.header("Content-Type", "application/x-www-form-urlencoded");
+                url::form_urlencoded::Serializer::new(String::new())
+                    .extend_pairs(form)
+                    .finish()
+                    .into_bytes()
+            }
+            (Some(body), None) => {
                 builder = builder.header("Content-Type", "application/json");
                 serde_json::to_vec(&body)
                     .map_err(|_| AdapterError::Invalid("Cannot encode request.".into()))?
             }
-            None => Vec::new(),
+            (None, None) => Vec::new(),
         };
         let request = builder
             .body(bytes)

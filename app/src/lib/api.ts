@@ -474,6 +474,8 @@ export interface Connections {
   external_slskd: boolean
   slskd_downloads_dir: string
   enabled: boolean
+  central_endpoint: string
+  google_client_id: string
 }
 export interface Seed { kind: 'artist' | 'label' | 'dj' | 'track'; value: string }
 export interface SoulseekStatus {
@@ -569,4 +571,23 @@ export const connections = {
   downloadDecline: (candidateId: string) => invoke<void>('download_decline', { candidateId }),
   unattendedGet: () => invoke<boolean>('unattended_downloads_get'),
   unattendedSet: (enabled: boolean) => invoke<void>('unattended_downloads_set', { enabled }),
+}
+export interface CentralStatus {
+  configured: boolean
+  signed_in: boolean
+  email: string | null
+  sharing: boolean
+  outbox: { pending: number; acked: number; rejected: number }
+}
+export interface BackupInfo { id: string; created_at_ms: number; size_bytes: number; version: number }
+export interface RestoreSummary { matched: number; to_relink: number; ratings: number; playlists: number; seeds: number }
+export const central = {
+  status: () => invoke<CentralStatus>('central_status'),
+  signIn: () => invoke<string | null>('central_sign_in'),
+  signOut: () => invoke<void>('central_sign_out'),
+  setSharing: (enabled: boolean) => invoke<number>('sharing_set', { enabled }),
+  backupNow: () => invoke<BackupInfo>('backup_now'),
+  backups: () => invoke<BackupInfo[]>('backups_list'),
+  restore: (id: string) => invoke<RestoreSummary>('backup_restore', { id }),
+  deleteBackup: (id: string) => invoke<void>('backup_delete', { id }),
 }

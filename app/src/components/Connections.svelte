@@ -14,6 +14,7 @@
     ['soulseek_username', 'Soulseek username'], ['soulseek_password', 'Soulseek password'],
     ['slskd', 'External slskd API key'],
     ['acoustid', 'AcoustID application key (for identifying library tracks)'],
+    ['google_client_secret', 'Google client secret (only if your client id needs one)'],
   ]
   async function run(action: () => Promise<unknown>, success = 'Saved') {
     busy = true; error = ''; message = ''
@@ -59,6 +60,8 @@
       <label>slskd endpoint <input bind:value={config.slskd_endpoint} /></label>
       <label>slskd downloads folder <input bind:value={config.slskd_downloads_dir} placeholder="The folder your slskd saves finished downloads in" /></label>
     {/if}
+    <label>Shared catalogue address <input bind:value={config.central_endpoint} placeholder="https://catalogue.example.run.app" /></label>
+    <label>Google client id <input bind:value={config.google_client_id} placeholder="1234-abc.apps.googleusercontent.com" /></label>
     <button onclick={() => run(() => connections.save(config!))}>Save connections</button>
     <Soulseek />
   </fieldset>

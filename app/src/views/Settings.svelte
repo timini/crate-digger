@@ -5,6 +5,7 @@
   import Folders from '../components/Folders.svelte'
   import Connections from '../components/Connections.svelte'
   import Models from '../components/Models.svelte'
+  import Account from '../components/Account.svelte'
 
   let settings: AppSettings | null = $state(null)
   let info: AppInfo | null = $state(null)
@@ -103,6 +104,9 @@
       <input type="checkbox" checked={settings.demo_discovery} onchange={(e) => run(() => api.setDemoDiscovery(e.currentTarget.checked), 'Saved')} />
       Demo discovery: generate tone recordings so the review queue can be tried. Nothing is downloaded.
     </label>
+
+    <h3>Account and backups</h3>
+    <Account />
 
     <h3>About</h3>
     <p class="muted small">

@@ -153,6 +153,7 @@ pub fn record(
     if confident(results, duration_ms) {
         apply(&tx, track_id, &results[0])?;
         set_status(&tx, track_id, "identified", None, now)?;
+        crate::sharing::after_identified(&tx, track_id, now)?;
     } else if results.is_empty() {
         set_status(&tx, track_id, "not_found", Some("No fingerprint match."), now)?;
     } else {
@@ -222,6 +223,7 @@ pub fn accept(conn: &Connection, suggestion_id: &str, now: i64) -> Result<()> {
         params![track_id],
     )?;
     set_status(&tx, &track_id, "identified", Some("Chosen by you."), now)?;
+    crate::sharing::after_identified(&tx, &track_id, now)?;
     tx.commit()?;
     Ok(())
 }
