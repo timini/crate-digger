@@ -138,6 +138,10 @@ impl MetadataService {
             {
                 fields.push(("year".into(), y.to_string()));
             }
+            // MusicBrainz's release country, e.g. "GB" or "XW" for worldwide.
+            if let Some(c) = r["country"].as_str().filter(|c| !c.is_empty()) {
+                fields.push(("release_country".into(), c.to_string()));
+            }
             if let Some(id) = r["id"].as_str() {
                 let mut url = Url::parse(&format!("{MUSICBRAINZ}/release/{id}")).expect("static url");
                 url.query_pairs_mut()
@@ -180,6 +184,9 @@ impl MetadataService {
         }
         if let Some(l) = hit["label"][0].as_str() {
             out.push(("label".into(), crate::discovery::clean_artist(l)));
+        }
+        if let Some(c) = hit["country"].as_str().filter(|c| !c.is_empty()) {
+            out.push(("release_country".into(), c.to_string()));
         }
         out
     }
@@ -336,7 +343,7 @@ mod tests {
                 u.path().ends_with("/recording/rec-1").then(|| {
                     json!({"isrcs": ["USXX1"], "releases": [
                         {"id": "rel-late", "title": "Remix Comp", "date": "2010", "status": "Official"},
-                        {"id": "rel-1", "title": "Rain EP", "date": "1995-03", "status": "Official"}
+                        {"id": "rel-1", "title": "Rain EP", "date": "1995-03", "status": "Official", "country": "US"}
                     ]})
                 })
             }),
@@ -361,6 +368,7 @@ mod tests {
             (get("release"), get("year"), get("label")),
             (Some("Rain EP"), Some("1995"), Some("Madhouse Records"))
         );
+        assert_eq!(get("release_country"), Some("US"));
         assert_eq!(best.duration_ms, Some(392_000));
         assert!(best.external_ids.contains(&("isrc".into(), "USXX1".into())));
         assert_eq!(best.discogs_fields[0], ("genre".into(), "Deep House".into()));

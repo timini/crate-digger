@@ -29,6 +29,7 @@ pub mod replenish;
 pub mod review;
 pub mod settings;
 pub mod sharing;
+pub mod similarity;
 pub mod util;
 pub mod youtube;
 

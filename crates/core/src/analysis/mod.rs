@@ -119,6 +119,10 @@ impl UnitEmbedding {
         &self.0.version
     }
 
+    pub fn values(&self) -> &[f32] {
+        &self.0.vector
+    }
+
     /// Cosine similarity with another unit embedding of the same version.
     pub fn cosine(&self, other: &UnitEmbedding) -> Result<f32, Box<IncompatibleVersions>> {
         if self.0.version != other.0.version || self.0.vector.len() != other.0.vector.len() {

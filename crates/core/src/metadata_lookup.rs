@@ -105,6 +105,18 @@ fn apply(conn: &Connection, track_id: &str, found: &Identified) -> Result<()> {
     if !found.discogs_fields.is_empty() {
         meta::set_extracted(conn, track_id, "discogs", &to_fields(&found.discogs_fields))?;
     }
+    // Release country has no effective field; it is kept as a sourced value.
+    for (source, pairs) in [("musicbrainz", &found.fields), ("discogs", &found.discogs_fields)] {
+        for (_, value) in pairs.iter().filter(|(f, _)| f == "release_country") {
+            conn.execute(
+                "INSERT INTO field_value (track_id, field, source, value, updated_at)
+                 VALUES (?1, 'release_country', ?2, ?3, ?4)
+                 ON CONFLICT (track_id, field, source) DO UPDATE SET value = excluded.value,
+                     updated_at = excluded.updated_at",
+                params![track_id, source, value, crate::util::now_ms()],
+            )?;
+        }
+    }
     for (namespace, value) in &found.external_ids {
         conn.execute(
             "INSERT OR IGNORE INTO track_external_id (track_id, namespace, value, source)

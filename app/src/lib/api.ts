@@ -591,3 +591,37 @@ export const central = {
   restore: (id: string) => invoke<RestoreSummary>('backup_restore', { id }),
   deleteBackup: (id: string) => invoke<void>('backup_delete', { id }),
 }
+export interface MapParams { neighbours: number; min_samples: number; eps: number | null; epochs: number; seed: number }
+export interface MapProvenance {
+  pipeline_version: string; distance: string; preprocessing: string; neighbours: number; min_samples: number
+  eps: number; eps_rule: string; layout: string; epochs: number; seed: number
+}
+export interface MapInfo {
+  id: string
+  version: { model_id: string; weights_checksum: string; preprocessing_version: string }
+  provenance: MapProvenance
+  placed: number; clusters: number; noise: number; build_ms: number; created_at: number
+}
+export interface MapPoint {
+  track_id: string; x: number; y: number; cluster: number | null
+  artist: string | null; title: string | null; mix: string | null
+  year: number | null; genre: string | null; label: string | null; release_country: string | null
+  playlists: string[]
+}
+export interface MapView {
+  map: MapInfo | null
+  coverage: { eligible: number; embedded: number; stale: string | null }
+  points: MapPoint[]
+  building: { progress: number } | null
+  last_error: string | null
+}
+export interface MapNeighbour { track_id: string; rank: number; distance: number; similarity: number; artist: string | null; title: string | null; mix: string | null }
+export interface Unplaced { track_id: string; artist: string | null; title: string | null; reason: string }
+export const libraryMap = {
+  get: () => invoke<MapView>('map_get'),
+  edges: (neighbours: number) => invoke<[string, string, number][]>('map_edges', { neighbours }),
+  neighbours: (trackId: string) => invoke<MapNeighbour[]>('map_neighbours', { trackId }),
+  unplaced: () => invoke<Unplaced[]>('map_unplaced'),
+  rebuild: (params: MapParams) => invoke<void>('map_rebuild', { params }),
+  cancel: () => invoke<void>('map_cancel'),
+}
