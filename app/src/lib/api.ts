@@ -331,6 +331,7 @@ export interface ReviewCard {
   confidence: number | null
   verified: boolean
   kept: boolean
+  wrong_version: boolean
   playlists: [string, string][]
 }
 
@@ -441,6 +442,7 @@ export const api = {
   skip: (trackId: string) => invoke<string>('review_skip', { trackId }),
   undo: () => invoke<Undone | null>('review_undo'),
   keep: (trackId: string, keep: boolean) => invoke<void>('review_keep', { trackId, keep }),
+  wrongVersion: (trackId: string, wrong: boolean) => invoke<void>('review_wrong_version', { trackId, wrong }),
   findMore: () => invoke<void>('review_find_more'),
   demoDiscovery: () => invoke<boolean>('demo_discovery_get'),
   setDemoDiscovery: (enabled: boolean) => invoke<void>('demo_discovery_set', { enabled }),
@@ -624,4 +626,30 @@ export const libraryMap = {
   unplaced: () => invoke<Unplaced[]>('map_unplaced'),
   rebuild: (params: MapParams) => invoke<void>('map_rebuild', { params }),
   cancel: () => invoke<void>('map_cancel'),
+}
+export interface PilotReport {
+  report_version: number
+  generated_at: number
+  app_version: string
+  model_id: string
+  first_judgement_at: number | null
+  last_judgement_at: number | null
+  ranking: {
+    judgements: number; strong_positives: number; without_embedding: number
+    auc_cultural: number | null; auc_combined: number | null; auc_difference_interval: [number, number] | null
+    top_fifth_strong_rate_cultural: number | null; top_fifth_strong_rate_combined: number | null
+  }
+  outcomes: {
+    judged: number; thumbs_down: number; one_star: number; two_stars: number; three_stars: number; skipped: number
+    strong_positive_rate: number | null; keep_rate: number | null; wrong_version_rate: number | null
+  }
+  buffer: { samples: number; any_ready: number; above_threshold: number }
+  source_runs: Record<string, number>
+  analysis: Record<string, number>
+  embedding_stability: { pairs: number; mean_similarity: number | null; min_similarity: number | null }
+  not_recorded: string[]
+}
+export const pilot = {
+  report: () => invoke<PilotReport>('evaluation_report'),
+  save: (path: string) => invoke<void>('evaluation_save', { path }),
 }

@@ -16,6 +16,7 @@ pub mod db;
 pub mod discovery;
 pub mod domain;
 pub mod error;
+pub mod evaluation;
 pub mod export;
 pub mod identity;
 pub mod jobs;

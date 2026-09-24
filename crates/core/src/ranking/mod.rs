@@ -253,7 +253,7 @@ pub fn order(scored: Vec<Scored>, profile: &Profile, cfg: &Config) -> Vec<(Score
     out
 }
 
-fn stars(kind: &str) -> Option<f32> {
+pub(crate) fn stars(kind: &str) -> Option<f32> {
     match kind {
         "star1" => Some(0.6),
         "star2" => Some(0.8),
@@ -263,7 +263,7 @@ fn stars(kind: &str) -> Option<f32> {
 }
 
 /// All summary embeddings of one version, by track.
-fn embeddings(conn: &Connection, v: &FeatureVersion) -> Result<HashMap<String, UnitEmbedding>> {
+pub(crate) fn embeddings(conn: &Connection, v: &FeatureVersion) -> Result<HashMap<String, UnitEmbedding>> {
     let mut stmt = conn.prepare(
         "SELECT track_id, embedding FROM feature_record
          WHERE model_id = ?1 AND weights_checksum = ?2 AND preprocessing_version = ?3

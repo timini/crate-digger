@@ -166,3 +166,37 @@ pub fn library_rate(state: State<'_, AppState>, track_id: String, kind: Option<R
     after_preference_change(&state);
     Ok(())
 }
+
+/// Flag the audio as a different version from the one described.
+#[tauri::command]
+pub fn review_wrong_version(state: State<'_, AppState>, track_id: String, wrong: bool) -> CmdResult<()> {
+    review::flag_wrong_version(&*state.db()?, &track_id, wrong, now_ms()).map_err(err)
+}
+
+fn pilot_report(state: &AppState) -> CmdResult<cd_core::evaluation::Report> {
+    use cd_core::analysis::handler::Analyzer;
+    let conn = state.db()?;
+    let limits = settings::limits(&conn).map_err(err)?;
+    cd_core::evaluation::report(
+        &conn,
+        &state.analyzer.version(),
+        &cd_core::ranking::DEFAULT,
+        limits.replenish_below as i64,
+        env!("CARGO_PKG_VERSION"),
+        now_ms(),
+    )
+    .map_err(err)
+}
+
+/// The pilot report: counts and rates only, safe to share.
+#[tauri::command]
+pub fn evaluation_report(state: State<'_, AppState>) -> CmdResult<cd_core::evaluation::Report> {
+    pilot_report(&state)
+}
+
+#[tauri::command]
+pub fn evaluation_save(state: State<'_, AppState>, path: String) -> CmdResult<()> {
+    let report = pilot_report(&state)?;
+    let json = serde_json::to_string_pretty(&report).map_err(err)?;
+    std::fs::write(&path, json).map_err(|e| format!("Could not save the report: {e}"))
+}

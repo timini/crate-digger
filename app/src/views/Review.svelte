@@ -106,6 +106,13 @@
     }, 'Undone')
   }
 
+  function toggleWrongVersion() {
+    if (!card) return
+    const id = card.track_id
+    const wrong = !card.wrong_version
+    act(() => api.wrongVersion(id, wrong), wrong ? 'Marked as the wrong version' : 'No longer marked as the wrong version')
+  }
+
   function toggleKeep() {
     if (!card) return
     const id = card.track_id
@@ -142,6 +149,7 @@
       s: skip,
       z: undo,
       k: toggleKeep,
+      w: toggleWrongVersion,
       p: () => addToPlaylist?.focus(),
       arrowleft: () => seekBy(-10_000),
       arrowright: () => seekBy(10_000),
@@ -245,6 +253,8 @@
         <button onclick={skip}>Skip <kbd>S</kbd></button>
         <button onclick={undo}>Undo <kbd>Z</kbd></button>
         <button onclick={toggleKeep} class:on={card.kept}>{card.kept ? 'Kept' : 'Keep'} <kbd>K</kbd></button>
+        <button onclick={toggleWrongVersion} class:on={card.wrong_version} aria-pressed={card.wrong_version}
+          title="The audio is a different mix, edit or take from the one described (W)">Wrong version <kbd>W</kbd></button>
       </div>
       <div class="playlist-row">
         {#key card.track_id}

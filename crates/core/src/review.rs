@@ -118,6 +118,7 @@ pub struct ReviewCard {
     pub confidence: Option<f64>,
     pub verified: bool,
     pub kept: bool,
+    pub wrong_version: bool,
     pub playlists: Vec<(String, String)>,
 }
 
@@ -201,6 +202,7 @@ fn card(conn: &Connection, candidate_id: &str) -> Result<Option<ReviewCard>> {
         confidence,
         verified,
         kept: is_kept(conn, &track_id)?,
+        wrong_version: is_wrong_version(conn, &track_id)?,
         playlists: playlists::containing(conn, &track_id)?,
         track_id,
     }))
@@ -335,6 +337,28 @@ pub fn undo(conn: &Connection, session: &str, now: i64) -> Result<Option<Undone>
         kind,
         effective,
     }))
+}
+
+pub fn is_wrong_version(conn: &Connection, track_id: &str) -> Result<bool> {
+    Ok(conn.query_row(
+        "SELECT EXISTS (SELECT 1 FROM version_flag WHERE track_id = ?1)",
+        params![track_id],
+        |r| r.get(0),
+    )?)
+}
+
+/// Mark or unmark the audio as a different version from the one described.
+/// Only recorded; ranking and ratings are unaffected.
+pub fn flag_wrong_version(conn: &Connection, track_id: &str, wrong: bool, now: i64) -> Result<()> {
+    if wrong {
+        conn.execute(
+            "INSERT OR IGNORE INTO version_flag (track_id, created_at) VALUES (?1, ?2)",
+            params![track_id, now],
+        )?;
+    } else {
+        conn.execute("DELETE FROM version_flag WHERE track_id = ?1", params![track_id])?;
+    }
+    Ok(())
 }
 
 pub fn is_kept(conn: &Connection, track_id: &str) -> Result<bool> {

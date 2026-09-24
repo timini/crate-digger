@@ -6,6 +6,7 @@
   import Connections from '../components/Connections.svelte'
   import Models from '../components/Models.svelte'
   import Account from '../components/Account.svelte'
+  import PilotReport from '../components/PilotReport.svelte'
 
   let settings: AppSettings | null = $state(null)
   let info: AppInfo | null = $state(null)
@@ -107,6 +108,9 @@
 
     <h3>Account and backups</h3>
     <Account />
+
+    <h3>Pilot evaluation</h3>
+    <PilotReport />
 
     <h3>About</h3>
     <p class="muted small">
