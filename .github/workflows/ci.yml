@@ -84,7 +84,7 @@ jobs:
         if: runner.os == 'Linux'
         # A new network namespace has only loopback, and it starts down; the
         # sign-in test needs 127.0.0.1.
-        run: sudo -E unshare --net -- sh -c 'ip link set lo up && sudo -u "$USER" -E env "PATH=$PATH" cargo test --workspace --offline'
+        run: sudo -E unshare --net -- sh -c "ip link set lo up && sudo -u $USER -E env PATH=$PATH cargo test --workspace --offline"
       - name: Test offline (macOS, Windows)
         if: runner.os != 'Linux'
         run: cargo test --workspace --offline
