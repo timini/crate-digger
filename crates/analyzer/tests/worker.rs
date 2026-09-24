@@ -156,6 +156,12 @@ fn playback_continues_while_the_worker_crashes() {
     player
         .load(std::path::Path::new(&fixture("tone.flac")), 0, true)
         .unwrap();
+    // Loading is asynchronous; a busy machine can take a moment to start.
+    let deadline = std::time::Instant::now() + Duration::from_secs(10);
+    while player.status().state != cd_audio::PlayState::Playing {
+        assert!(std::time::Instant::now() < deadline, "{:?}", player.status());
+        std::thread::sleep(Duration::from_millis(10));
+    }
     for fault in ["crash", "garbage", "memory"] {
         assert!(run(&with_fault(fault), &analyse(&fixture("tone.flac"))).is_err());
     }

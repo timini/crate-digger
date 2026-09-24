@@ -1,0 +1,129 @@
+name: Release
+
+# Builds installers for every target platform from a version tag and
+# attaches them, with checksums, to a draft GitHub release. The draft is
+# published by hand after the checklist in docs/release-checklist.md.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+
+jobs:
+  version:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tag matches the app version
+        id: check
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          conf="$(jq -r .version app/src-tauri/tauri.conf.json)"
+          cargo_version="$(sed -n '/^\[workspace.package\]/,/^\[/s/^version = "\(.*\)"/\1/p' Cargo.toml)"
+          if ! [[ "$tag" == "$conf" && "$tag" == "$cargo_version" ]]; then
+            echo "Tag $tag, tauri.conf.json $conf and Cargo.toml $cargo_version must match."
+            exit 1
+          fi
+          echo "version=$tag" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: version
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            target: aarch64-apple-darwin
+          - os: macos-15-intel
+            target: x86_64-apple-darwin
+          - os: windows-2022
+            target: x86_64-pc-windows-msvc
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+    runs-on: ${{ matrix.os }}
+    env:
+      SIGN_MACOS: ${{ startsWith(matrix.os, 'macos') && secrets.APPLE_CERTIFICATE != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.97.1
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libasound2-dev libdbus-1-dev pkg-config xvfb
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: app/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+        working-directory: app
+      - name: Test
+        run: cargo test --workspace --locked
+      - name: Build signed macOS bundle
+        # Only when the Apple signing secrets are configured.
+        if: env.SIGN_MACOS == 'true'
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: pnpm tauri build --target ${{ matrix.target }}
+        working-directory: app
+      - name: Build unsigned bundle
+        if: env.SIGN_MACOS != 'true'
+        run: pnpm tauri build --target ${{ matrix.target }}
+        working-directory: app
+      - name: Launch smoke test
+        shell: bash
+        run: bash scripts/smoke-launch.sh ${{ matrix.target }}
+      - name: Collect installers
+        shell: bash
+        run: |
+          mkdir -p dist-release
+          shopt -s globstar nullglob
+          for f in target/${{ matrix.target }}/release/bundle/**/*.{dmg,msi,exe,deb,rpm,AppImage}; do
+            cp "$f" dist-release/
+          done
+          ls -l dist-release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installers-${{ matrix.target }}
+          path: dist-release/*
+          if-no-files-found: error
+
+  release:
+    needs: [version, build]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: installers-*
+          path: dist
+          merge-multiple: true
+      - name: Checksums
+        working-directory: dist
+        run: sha256sum -- * > SHA256SUMS.txt && cat SHA256SUMS.txt
+      - name: Draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --draft \
+            --title "Crate Digger ${{ needs.version.outputs.version }}" \
+            --notes "Draft. Publish after the release checklist (docs/release-checklist.md) is complete."
