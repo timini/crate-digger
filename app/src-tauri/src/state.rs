@@ -27,6 +27,8 @@ pub struct AppState {
     pub connections: Arc<RwLock<cd_connectors::config::Connections>>,
     pub soulseek: Arc<crate::soulseek::Soulseek>,
     pub central: Arc<crate::central::CentralService>,
+    /// The library map build in progress, if any.
+    pub map_build: Arc<Mutex<Option<Arc<crate::commands::map::MapBuild>>>>,
 }
 
 pub fn archive_dir_setting(conn: &Connection) -> Option<PathBuf> {
@@ -99,6 +101,7 @@ impl AppState {
             connections,
             soulseek,
             central,
+            map_build: Arc::default(),
         })
     }
 

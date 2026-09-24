@@ -6,6 +6,7 @@ pub mod connections;
 pub mod identity;
 pub mod jobs;
 pub mod library;
+pub mod map;
 pub mod player;
 pub mod playlists;
 pub mod review;

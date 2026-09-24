@@ -3,6 +3,7 @@
   import { api, type AppInfo } from './lib/api'
   import Activity from './views/Activity.svelte'
   import Library from './views/Library.svelte'
+  import LibraryMap from './views/Map.svelte'
   import PlayerBar from './components/PlayerBar.svelte'
   import Playlists from './views/Playlists.svelte'
   import Review from './views/Review.svelte'
@@ -11,10 +12,11 @@
   import Onboarding from './components/Onboarding.svelte'
   import type { AppSettings } from './lib/api'
 
-  type View = 'review' | 'library' | 'playlists' | 'identity' | 'activity' | 'settings'
+  type View = 'review' | 'library' | 'map' | 'playlists' | 'identity' | 'activity' | 'settings'
   const views: { id: View; label: string }[] = [
     { id: 'review', label: 'Review' },
     { id: 'library', label: 'Library' },
+    { id: 'map', label: 'Map' },
     { id: 'playlists', label: 'Playlists' },
     { id: 'identity', label: 'Identity' },
     { id: 'activity', label: 'Activity' },
@@ -72,6 +74,8 @@
       <Activity />
     {:else if current === 'library'}
       <Library />
+    {:else if current === 'map'}
+      <LibraryMap />
     {:else if current === 'playlists'}
       <Playlists />
     {:else if current === 'identity'}
