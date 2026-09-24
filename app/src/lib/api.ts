@@ -463,6 +463,7 @@ export const api = {
   downloadModel: (id: string) => invoke<void>('model_download', { id }),
   downloadProgress: () => invoke<{ id: string; bytes: number } | null>('model_download_progress'),
   chooseModel: (id: string | null) => invoke<void>('model_choose', { id }),
+  libraryRate: (trackId: string, kind: RatingKind | null) => invoke<void>('library_rate', { trackId, kind }),
 }
 
 export interface Connections {
@@ -514,6 +515,26 @@ export interface ExportCheck {
 export const exporting = {
   check: (id: string) => invoke<ExportCheck>('playlist_export_check', { id }),
   write: (id: string, format: 'm3u8' | 'rekordbox', path: string) => invoke<number>('playlist_export', { id, format, path }),
+}
+export interface MetadataStatus {
+  status: 'queued' | 'identified' | 'suggested' | 'not_found' | 'waiting' | 'failed'
+  detail: string | null
+  updated_at: number
+}
+export interface MetadataSuggestion {
+  id: string
+  track_id: string
+  current: TrackMeta
+  score: number
+  found: { score: number; duration_ms: number | null; fields: [string, string][]; discogs_fields: [string, string][] }
+}
+export const metadata = {
+  status: (trackId: string) => invoke<MetadataStatus | null>('metadata_status', { trackId }),
+  identifyAll: () => invoke<number>('metadata_identify_all'),
+  identify: (trackId: string) => invoke<void>('metadata_identify', { trackId }),
+  suggestions: () => invoke<MetadataSuggestion[]>('metadata_suggestions'),
+  accept: (id: string) => invoke<void>('metadata_accept', { id }),
+  dismiss: (trackId: string) => invoke<void>('metadata_dismiss', { trackId }),
 }
 export interface SourceRun {
   source: string

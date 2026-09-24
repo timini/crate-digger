@@ -434,3 +434,48 @@ fn restart_mid_pipeline_resumes_without_repeating_downloads() {
         "each candidate downloaded once"
     );
 }
+
+#[test]
+fn any_track_can_be_rated_changed_cleared_and_undone() {
+    let conn = crate::db::open_in_memory().unwrap();
+    let t = crate::meta::create_track(&conn).unwrap();
+    rate(&conn, &t, RatingKind::Star1, S1, 1).unwrap();
+    rate(&conn, &t, RatingKind::Star3, S1, 2).unwrap();
+    assert_eq!(effective_rating(&conn, &t).unwrap(), Some(RatingKind::Star3));
+
+    assert!(clear(&conn, &t, S1, 3).unwrap().is_some());
+    assert_eq!(effective_rating(&conn, &t).unwrap(), None);
+    assert!(
+        clear(&conn, &t, S1, 4).unwrap().is_none(),
+        "clearing an unrated track records nothing"
+    );
+    assert!(rate(&conn, &t, RatingKind::Cleared, S1, 5).is_err());
+
+    // Undo restores the rating the clear removed.
+    let undone = undo(&conn, S1, 6).unwrap().unwrap();
+    assert_eq!(undone.kind, RatingKind::Cleared);
+    assert_eq!(undone.effective, Some(RatingKind::Star3));
+}
+
+#[test]
+fn clearing_migration_keeps_existing_events() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("db.sqlite");
+    let mut conn = rusqlite::Connection::open(&path).unwrap();
+    crate::db::configure(&conn).unwrap();
+    crate::db::migrate_to(&mut conn, 12).unwrap();
+    let t = crate::meta::create_track(&conn).unwrap();
+    rate(&conn, &t, RatingKind::Star2, S1, 1).unwrap();
+    skip(&conn, &t, S1, 2).unwrap();
+    rate(&conn, &t, RatingKind::ThumbsDown, S1, 3).unwrap();
+    undo(&conn, S1, 4).unwrap();
+    drop(conn);
+    let conn = crate::db::open(&path).unwrap();
+    let n: i64 = conn
+        .query_row("SELECT COUNT(*) FROM rating_event", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(n, 4);
+    assert_eq!(effective_rating(&conn, &t).unwrap(), Some(RatingKind::Star2));
+    clear(&conn, &t, S1, 5).unwrap();
+    assert_eq!(effective_rating(&conn, &t).unwrap(), None);
+}

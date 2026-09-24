@@ -15,6 +15,8 @@ use crate::Result;
 /// Lower number wins when several automatic sources disagree.
 fn source_priority(source: &str) -> i64 {
     match source {
+        // Identified from the audio fingerprint with high confidence.
+        "musicbrainz" => -1,
         "tags" => 0,
         "discogs" => 10,
         "analysis" => 20,

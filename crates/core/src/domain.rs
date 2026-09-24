@@ -109,6 +109,7 @@ string_enum!(
         Star1 => "star1",
         Star2 => "star2",
         Star3 => "star3",
+        Cleared => "cleared",
         Skip => "skip",
         Undo => "undo",
     }
@@ -172,7 +173,7 @@ impl Preference {
             RatingKind::Star1 => Some(Preference::Stars(1)),
             RatingKind::Star2 => Some(Preference::Stars(2)),
             RatingKind::Star3 => Some(Preference::Stars(3)),
-            RatingKind::Skip | RatingKind::Undo => None,
+            RatingKind::Cleared | RatingKind::Skip | RatingKind::Undo => None,
         }
     }
 

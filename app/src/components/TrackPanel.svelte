@@ -2,7 +2,9 @@
   import { open } from '@tauri-apps/plugin-dialog'
   import { revealItemInDir } from '@tauri-apps/plugin-opener'
   import { api, type Field, type RelinkProposal, type TrackDetail } from '../lib/api'
-  import { formatBytes, formatCodec, formatDuration, formatRating, formatVariant, trackLabel } from '../lib/format'
+  import { formatBytes, formatCodec, formatDuration, formatVariant, trackLabel } from '../lib/format'
+  import RatingControl from './RatingControl.svelte'
+  import MetadataStatus from './MetadataStatus.svelte'
   import { playTrack } from '../lib/player.svelte'
   import AddToPlaylist from './AddToPlaylist.svelte'
 
@@ -104,7 +106,7 @@
   {#if error}<p class="error">{error}</p>{/if}
   {#if detail}
     <p class="muted">
-      {#if detail.rating}Rated {formatRating(detail.rating)}{:else}Not rated{/if}
+      <RatingControl trackId={trackId} rating={detail.rating} onchange={(r) => ((detail!.rating = r), onchange())} />
       {#if detail.kept} · Kept{/if}
       {#if detail.playlists.length}· In {detail.playlists.map((p) => p[1]).join(', ')}{/if}
     </p>
@@ -129,6 +131,7 @@
       {/each}
     </form>
     <p class="muted small">Edits are stored separately and are never overwritten by a rescan. Files are not modified.</p>
+    <MetadataStatus {trackId} />
 
     <h4>Analysis</h4>
     {#if detail.analysis.state?.state === 'done'}

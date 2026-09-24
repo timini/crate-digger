@@ -1,11 +1,13 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte'
   import { open } from '@tauri-apps/plugin-dialog'
-  import { api, type Availability, type LibraryQuery, type LibraryRoot, type LibraryRow, type RatingFilter, type SortBy } from '../lib/api'
-  import { formatDuration, formatRating, trackLabel } from '../lib/format'
+  import { api, type Availability, type LibraryQuery, type LibraryRoot, type LibraryRow, type RatingFilter, type RatingKind, type SortBy } from '../lib/api'
+  import { formatDuration, trackLabel } from '../lib/format'
   import { playTrack } from '../lib/player.svelte'
   import TrackPanel from '../components/TrackPanel.svelte'
+  import RatingControl from '../components/RatingControl.svelte'
   import Duplicates from '../components/Duplicates.svelte'
+  import MetadataCheck from '../components/MetadataCheck.svelte'
 
   const PAGE = 300
 
@@ -139,6 +141,28 @@
     } else if (e.key === 'Enter' && selected) {
       const row = rows.find((r) => r.track_id === selected)
       if (row) play(row)
+    } else if (selected && ['0', '1', '2', '3', 'Backspace'].includes(e.key) && !e.metaKey && !e.ctrlKey) {
+      e.preventDefault()
+      const row = rows.find((r) => r.track_id === selected)
+      if (row) void rate(row, e.key)
+    }
+  }
+
+  const KEY_RATINGS: Record<string, RatingKind | null> = {
+    '0': 'thumbs_down',
+    '1': 'star1',
+    '2': 'star2',
+    '3': 'star3',
+    Backspace: null,
+  }
+
+  async function rate(row: LibraryRow, key: string) {
+    const kind = KEY_RATINGS[key] ?? null
+    try {
+      await api.libraryRate(row.track_id, kind)
+      row.rating = kind
+    } catch (e) {
+      error = String(e)
     }
   }
 </script>
@@ -160,6 +184,7 @@
       <button onclick={rescan} disabled={roots.length === 0}>Rescan</button>
       <button onclick={checkFiles}>Check files</button>
       <button onclick={() => (showDuplicates = true)}>Duplicates</button>
+      <MetadataCheck onchange={load} />
     </header>
 
     <div class="filters">
@@ -226,7 +251,9 @@
               <td class="r">{row.tempo ?? ''}</td>
               <td>{row.musical_key ?? ''}</td>
               <td class="r muted">{formatDuration(row.duration_ms)}</td>
-              <td class="rating">{formatRating(row.rating)}</td>
+              <td class="rating">
+                <RatingControl trackId={row.track_id} rating={row.rating} onchange={(r) => (row.rating = r)} />
+              </td>
               <td class="status" title={row.availability_reason ?? ''}>
                 {#if row.availability === 'missing'}Missing{:else if row.availability === 'corrupt'}Unreadable{/if}
                 {#if row.playlist_count > 0}<span class="muted">· {row.playlist_count} playlist{row.playlist_count > 1 ? 's' : ''}</span>{/if}

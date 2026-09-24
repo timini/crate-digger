@@ -1,6 +1,7 @@
 mod commands;
 mod models;
 mod probe;
+mod secrets;
 mod soulseek;
 mod state;
 mod tray;
@@ -36,6 +37,12 @@ pub fn run() {
                 use cd_core::analysis::handler::Analyzer;
                 if let Err(e) = workers::plan_analysis(&conn, &state.analyzer.version()) {
                     tracing::warn!("could not plan analysis: {e}");
+                }
+            }
+            if let Ok(conn) = state.db() {
+                // Tracks analysed before metadata lookup existed.
+                if let Err(e) = cd_core::metadata_lookup::queue_all(&conn, cd_core::util::now_ms()) {
+                    tracing::warn!("could not queue metadata lookups: {e}");
                 }
             }
             let handlers = workers::handlers(&state);
@@ -76,6 +83,12 @@ pub fn run() {
             commands::connections::youtube_reject,
             commands::connections::youtube_refresh,
             commands::connections::soulseek_status,
+            commands::connections::metadata_status,
+            commands::connections::metadata_identify_all,
+            commands::connections::metadata_identify,
+            commands::connections::metadata_suggestions,
+            commands::connections::metadata_accept,
+            commands::connections::metadata_dismiss,
             commands::connections::soulseek_setup,
             commands::connections::download_choices,
             commands::connections::download_choose,
@@ -142,6 +155,7 @@ pub fn run() {
             commands::analysis::model_choose,
             commands::review::demo_discovery_get,
             commands::review::queue_health,
+            commands::review::library_rate,
             commands::review::demo_discovery_set,
         ])
         .on_window_event(|window, event| {

@@ -4,6 +4,7 @@ pub mod credentials;
 pub mod discovery;
 pub mod http;
 pub mod llm;
+pub mod metadata;
 pub mod probe;
 pub mod slskd;
 #[cfg(test)]

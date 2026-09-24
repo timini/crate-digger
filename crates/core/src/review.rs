@@ -267,7 +267,7 @@ pub fn effective_rating(conn: &Connection, track_id: &str) -> Result<Option<Rati
 /// Record a rating. It is on disk when this returns; reranking happens
 /// separately.
 pub fn rate(conn: &Connection, track_id: &str, kind: RatingKind, session: &str, now: i64) -> Result<String> {
-    if matches!(kind, RatingKind::Skip | RatingKind::Undo) {
+    if matches!(kind, RatingKind::Skip | RatingKind::Undo | RatingKind::Cleared) {
         return Err(Error::Invalid(format!("{kind} is not a rating")));
     }
     let tx = conn.unchecked_transaction()?;
@@ -279,6 +279,15 @@ pub fn rate(conn: &Connection, track_id: &str, kind: RatingKind, session: &str, 
     }
     tx.commit()?;
     Ok(id)
+}
+
+/// Remove a track's rating. Recorded as an event, so undo restores the
+/// earlier rating.
+pub fn clear(conn: &Connection, track_id: &str, session: &str, now: i64) -> Result<Option<String>> {
+    if effective_rating(conn, track_id)?.is_none() {
+        return Ok(None);
+    }
+    insert_event(conn, track_id, RatingKind::Cleared, session, None, now).map(Some)
 }
 
 /// Defer a track for this session. Not a preference.
