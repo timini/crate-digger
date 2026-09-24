@@ -54,9 +54,7 @@ impl AppState {
         )
         .unwrap_or_default();
         let connections = Arc::new(RwLock::new(connections));
-        let secrets: Arc<dyn cd_connectors::credentials::SecretStore> = Arc::new(
-            cd_connectors::credentials::CachedStore::new(cd_connectors::credentials::Keychain),
-        );
+        let secrets = crate::secrets::store();
         let staging: Arc<dyn Fn() -> PathBuf + Send + Sync> = {
             let db_path = db_path.clone();
             let default = data_dir.join("staging");

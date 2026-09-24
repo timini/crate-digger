@@ -86,6 +86,67 @@ impl SecretStore for MemoryStore {
     }
 }
 
+/// The macOS keychain through Apple's `security` tool, for dev builds.
+/// Keychain entries trust the program that created them; dev builds change
+/// on every rebuild, so going through the keychain API asks for permission
+/// again and again. `security` is a fixed, Apple-signed program, so entries
+/// it created open without prompts. Secrets stay in the keychain.
+#[cfg(target_os = "macos")]
+pub struct SecurityTool;
+
+#[cfg(target_os = "macos")]
+impl SecretStore for SecurityTool {
+    fn get(&self, key: Credential) -> AdapterResult<Option<String>> {
+        let out = std::process::Command::new("/usr/bin/security")
+            .args(["find-generic-password", "-s", SERVICE, "-a", key.name(), "-w"])
+            .output()
+            .map_err(|_| keychain_unavailable())?;
+        match out.status.code() {
+            Some(0) => {
+                let v = String::from_utf8_lossy(&out.stdout)
+                    .trim_end_matches('\n')
+                    .to_string();
+                Ok(Some(v).filter(|v| !v.is_empty()))
+            }
+            // 44: the item could not be found.
+            Some(44) => Ok(None),
+            _ => Err(keychain_unavailable()),
+        }
+    }
+
+    fn set(&self, key: Credential, value: Option<&str>) -> AdapterResult<()> {
+        let status = match value.filter(|v| !v.is_empty()) {
+            Some(v) => std::process::Command::new("/usr/bin/security")
+                .args([
+                    "add-generic-password",
+                    "-U",
+                    "-s",
+                    SERVICE,
+                    "-a",
+                    key.name(),
+                    "-w",
+                    v,
+                ])
+                .output(),
+            None => std::process::Command::new("/usr/bin/security")
+                .args(["delete-generic-password", "-s", SERVICE, "-a", key.name()])
+                .output(),
+        }
+        .map_err(|_| keychain_unavailable())?
+        .status
+        .code();
+        match (status, value.is_some()) {
+            (Some(0), _) | (Some(44), false) => Ok(()),
+            _ => Err(keychain_unavailable()),
+        }
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn keychain_unavailable() -> AdapterError {
+    AdapterError::Unavailable("Cannot access the macOS keychain. Unlock it and retry.".into())
+}
+
 /// Reads each secret from the inner store at most once and keeps it in
 /// memory for the life of the app, so the operating system asks for
 /// keychain permission once per entry per launch rather than on every use.

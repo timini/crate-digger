@@ -1,6 +1,7 @@
 mod commands;
 mod models;
 mod probe;
+mod secrets;
 mod soulseek;
 mod state;
 mod tray;
