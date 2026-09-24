@@ -1,9 +1,10 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { api, type Playlist, type PlaylistEntry } from '../lib/api'
+  import { api, workspace, type Playlist, type PlaylistEntry } from '../lib/api'
   import { formatDuration, formatRating, trackLabel } from '../lib/format'
   import { playTrack } from '../lib/player.svelte'
   import ExportPlaylist from '../components/ExportPlaylist.svelte'
+  import PlaylistWorkspace from '../components/PlaylistWorkspace.svelte'
 
   let playlists: Playlist[] = $state([])
   let current: string | null = $state(null)
@@ -19,8 +20,11 @@
 
   const currentPlaylist = $derived(playlists.find((p) => p.id === current) ?? null)
 
+  let waiting: Record<string, number> = $state({})
+
   async function loadPlaylists() {
     playlists = await api.playlists()
+    waiting = await workspace.readyCounts().catch(() => ({}))
     if (!current && playlists.length) current = playlists[0].id
   }
 
@@ -106,7 +110,7 @@
     {#each playlists as p (p.id)}
       <button class="pl" class:active={p.id === current} onclick={() => select(p.id)}>
         <span>{p.name}</span>
-        <span class="muted">{p.track_count}</span>
+        <span class="muted">{p.track_count}{#if waiting[p.id]} · <span class="new">{waiting[p.id]} new</span>{/if}</span>
       </button>
     {/each}
     {#if playlists.length === 0}
@@ -141,8 +145,10 @@
         {/if}
       </header>
 
+      <PlaylistWorkspace playlist={currentPlaylist} onchange={loadPlaylists} />
+
       {#if entries.length === 0}
-        <p class="muted">Empty. Add tracks from the Library or the Review queue.</p>
+        <p class="muted">Empty. Add tracks from the Library, the Map, or this playlist's suggestions.</p>
       {:else}
         <p class="muted small">Drag to reorder, or select a row and press Alt+Up / Alt+Down. Delete removes the entry, not the file.</p>
         <table>
@@ -273,5 +279,8 @@
   .danger {
     border-color: var(--danger);
     color: var(--danger);
+  }
+  .new {
+    color: var(--accent);
   }
 </style>

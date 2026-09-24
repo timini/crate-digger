@@ -34,6 +34,22 @@ fn keep_queue_full(state: &AppState) {
     if let Ok(b) = cd_core::replenish::buffer(&conn, &limits) {
         let _ = cd_core::replenish::sample(&conn, b.ready, now);
     }
+    // Playlists with discovery on ask for more when their queue runs short,
+    // at most once an hour each. Downloads still share the app-wide limits.
+    let playlist_connector = crate::commands::playlists::discovery_connector(&conn);
+    match cd_core::workspace::refresh_due(&conn, &state.analyzer.version(), 10, 3_600_000, now) {
+        Ok(due) => {
+            for p in &due {
+                if let Err(e) = cd_core::workspace::request_discovery(&conn, playlist_connector, p, 10, now) {
+                    tracing::warn!("could not queue playlist discovery: {e}");
+                }
+            }
+            if !due.is_empty() {
+                state.notify_workers();
+            }
+        }
+        Err(e) => tracing::warn!("could not check playlist discovery: {e}"),
+    }
     let demo =
         cd_core::settings::get_or(&conn, cd_core::settings::keys::DEMO_DISCOVERY, false).unwrap_or(false);
     let automatic = state.connections.read().unwrap().enabled;

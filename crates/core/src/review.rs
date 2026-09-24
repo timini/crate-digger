@@ -120,6 +120,17 @@ pub struct ReviewCard {
     pub kept: bool,
     pub wrong_version: bool,
     pub playlists: Vec<(String, String)>,
+    /// Playlists this track was suggested for: (id, name).
+    pub suggested_for: Vec<(String, String)>,
+    /// Set when the card comes from a playlist's queue.
+    pub playlist_fit: Option<PlaylistFit>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct PlaylistFit {
+    pub playlist_id: String,
+    pub name: String,
+    pub reasons: Vec<String>,
 }
 
 fn card(conn: &Connection, candidate_id: &str) -> Result<Option<ReviewCard>> {
@@ -204,6 +215,8 @@ fn card(conn: &Connection, candidate_id: &str) -> Result<Option<ReviewCard>> {
         kept: is_kept(conn, &track_id)?,
         wrong_version: is_wrong_version(conn, &track_id)?,
         playlists: playlists::containing(conn, &track_id)?,
+        suggested_for: crate::workspace::contexts(conn, candidate_id)?,
+        playlist_fit: None,
         track_id,
     }))
 }
@@ -223,6 +236,35 @@ pub fn next(conn: &Connection, session: &str, limit: i64) -> Result<Vec<ReviewCa
     let mut cards = Vec::new();
     for id in ids {
         if let Some(c) = card(conn, &id)? {
+            cards.push(c);
+        }
+    }
+    Ok(cards)
+}
+
+/// The next cards in a playlist's queue, best fit first.
+pub fn next_for_playlist(
+    conn: &Connection,
+    playlist: &str,
+    v: &crate::analysis::FeatureVersion,
+    limit: usize,
+) -> Result<Vec<ReviewCard>> {
+    let name: String = conn
+        .query_row(
+            "SELECT name FROM playlist WHERE id = ?1",
+            params![playlist],
+            |r| r.get(0),
+        )
+        .optional()?
+        .ok_or_else(|| crate::Error::NotFound(format!("playlist {playlist}")))?;
+    let mut cards = vec![];
+    for s in crate::workspace::queue(conn, playlist, v, limit)? {
+        if let Some(mut c) = card(conn, &s.candidate_id)? {
+            c.playlist_fit = Some(PlaylistFit {
+                playlist_id: playlist.to_string(),
+                name: name.clone(),
+                reasons: s.reasons,
+            });
             cards.push(c);
         }
     }

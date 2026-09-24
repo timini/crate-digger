@@ -14,7 +14,10 @@ const card = {
   confidence: 0.8,
   verified: true,
   kept: false,
+  wrong_version: false,
   playlists: [],
+  suggested_for: [['p1', 'Warm-up']],
+  playlist_fit: null,
 }
 
 vi.mock('@tauri-apps/api/core', () => ({
@@ -28,7 +31,11 @@ vi.mock('@tauri-apps/api/core', () => ({
       case 'demo_discovery_get':
         return true
       case 'playlists_list':
-        return []
+        return [{ id: 'p1', name: 'Warm-up', brief: '', discovery: false, track_count: 0, duration_ms: 0, created_at: 0, updated_at: 0 }]
+      case 'playlist_queue':
+        return [{ ...card, playlist_fit: { playlist_id: 'p1', name: 'Warm-up', reasons: ['Sounds like tracks already in this playlist'] } }]
+      case 'playlist_feedback_undo':
+        return 't1'
       case 'player_status':
         return { track_id: 't1', state: 'playing', position_ms: 0, duration_ms: 20000, volume: 1 }
       case 'review_undo':
@@ -41,6 +48,7 @@ vi.mock('@tauri-apps/api/core', () => ({
 vi.mock('@tauri-apps/plugin-opener', () => ({ openUrl: vi.fn() }))
 
 import Review from './Review.svelte'
+import { nav } from '../lib/nav.svelte'
 
 async function press(key: string) {
   await fireEvent.keyDown(window, { key })
@@ -116,5 +124,44 @@ describe('Review keyboard control', () => {
     document.body.appendChild(input)
     await fireEvent.keyDown(input, { key: '3' })
     expect(sent('review_rate')).toHaveLength(0)
+  })
+})
+
+describe('Reviewing a playlist\'s suggestions', () => {
+  afterEach(() => {
+    cleanup()
+    nav.reviewPlaylist = null
+  })
+
+  beforeEach(async () => {
+    calls.length = 0
+    nav.reviewPlaylist = 'p1'
+    render(Review)
+    await screen.findByRole('heading', { name: /Deterministic/ })
+  })
+
+  it('loads the playlist queue and shows why the track fits', async () => {
+    expect(sent('playlist_queue')[0].args).toEqual({ id: 'p1', limit: 50 })
+    expect(sent('review_next')).toHaveLength(0)
+    expect(screen.getByText('Sounds like tracks already in this playlist')).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'Suggestions for Warm-up' })).toBeTruthy()
+  })
+
+  it('A adds to the playlist, N says it does not fit, and Z undoes the decision', async () => {
+    await press('a')
+    await waitFor(() => expect(sent('playlist_feedback')).toHaveLength(1))
+    expect(sent('playlist_feedback')[0].args).toEqual({ id: 'p1', trackId: 't1', verdict: 'fits' })
+    await press('z')
+    await waitFor(() => expect(sent('playlist_feedback_undo')).toHaveLength(1))
+    expect(sent('review_undo')).toHaveLength(0)
+    await press('n')
+    await waitFor(() => expect(sent('playlist_feedback')).toHaveLength(2))
+    expect(sent('playlist_feedback')[1].args).toEqual({ id: 'p1', trackId: 't1', verdict: 'not_for_this' })
+  })
+
+  it('a rating stays personal and makes no playlist decision', async () => {
+    await press('3')
+    await waitFor(() => expect(sent('review_rate')).toHaveLength(1))
+    expect(sent('playlist_feedback')).toHaveLength(0)
   })
 })

@@ -44,6 +44,11 @@ pub const MIGRATIONS: &[(i64, &str, &str)] = &[
         "evaluation",
         include_str!("../migrations/0016_evaluation.sql"),
     ),
+    (
+        17,
+        "playlist_workspace",
+        include_str!("../migrations/0017_playlist_workspace.sql"),
+    ),
 ];
 
 pub fn latest_version() -> i64 {

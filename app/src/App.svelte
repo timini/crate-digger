@@ -11,19 +11,19 @@
   import Identity from './views/Identity.svelte'
   import Onboarding from './components/Onboarding.svelte'
   import type { AppSettings } from './lib/api'
+  import { nav, type View } from './lib/nav.svelte'
 
-  type View = 'review' | 'library' | 'map' | 'playlists' | 'identity' | 'activity' | 'settings'
+  // Playlists come first: they are where discovery starts.
   const views: { id: View; label: string }[] = [
-    { id: 'review', label: 'Review' },
+    { id: 'playlists', label: 'Playlists' },
+    { id: 'review', label: 'Discovery' },
     { id: 'library', label: 'Library' },
     { id: 'map', label: 'Map' },
-    { id: 'playlists', label: 'Playlists' },
-    { id: 'identity', label: 'Identity' },
     { id: 'activity', label: 'Activity' },
+    { id: 'identity', label: 'Identity' },
     { id: 'settings', label: 'Settings' },
   ]
 
-  let current: View = $state('review')
   let info: AppInfo | null = $state(null)
   let error: string | null = $state(null)
   let firstRun: AppSettings | null = $state(null)
@@ -55,7 +55,7 @@
   <nav>
     <h1>Crate Digger</h1>
     {#each views as v}
-      <button class:active={current === v.id} onclick={() => (current = v.id)}>
+      <button class:active={nav.view === v.id} onclick={() => { if (v.id === 'review') nav.reviewPlaylist = null; nav.view = v.id }}>
         {v.label}
         {#if v.id === 'identity' && conflicts > 0}<span class="badge">{conflicts}</span>{/if}
       </button>
@@ -68,27 +68,27 @@
     {#if error}
       <p class="error">{error}</p>
     {/if}
-    {#if current === 'review'}
+    {#if nav.view === 'review'}
       <Review />
-    {:else if current === 'activity'}
+    {:else if nav.view === 'activity'}
       <Activity />
-    {:else if current === 'library'}
+    {:else if nav.view === 'library'}
       <Library />
-    {:else if current === 'map'}
+    {:else if nav.view === 'map'}
       <LibraryMap />
-    {:else if current === 'playlists'}
+    {:else if nav.view === 'playlists'}
       <Playlists />
-    {:else if current === 'identity'}
+    {:else if nav.view === 'identity'}
       <Identity onchange={refreshConflicts} />
-    {:else if current === 'settings'}
+    {:else if nav.view === 'settings'}
       <Settings />
     {:else}
-      <p class="muted">{views.find((v) => v.id === current)?.label} view</p>
+      <p class="muted">{views.find((v) => v.id === nav.view)?.label} view</p>
     {/if}
   </main>
 </div>
 <PlayerBar />
 </div>
 {#if firstRun}
-  <Onboarding settings={firstRun} ondone={() => ((firstRun = null), (current = 'library'))} />
+  <Onboarding settings={firstRun} ondone={() => ((firstRun = null), (nav.view = 'library'))} />
 {/if}
