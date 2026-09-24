@@ -11,6 +11,9 @@ pub enum Credential {
     SoulseekPassword,
     Slskd,
     Acoustid,
+    /// Keeps the catalogue sign-in across launches.
+    GoogleRefresh,
+    GoogleClientSecret,
 }
 
 impl Credential {
@@ -23,6 +26,8 @@ impl Credential {
             Self::SoulseekPassword => "soulseek_password",
             Self::Slskd => "slskd",
             Self::Acoustid => "acoustid",
+            Self::GoogleRefresh => "google_refresh",
+            Self::GoogleClientSecret => "google_client_secret",
         }
     }
 }

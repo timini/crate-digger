@@ -4,7 +4,7 @@ const calls: { cmd: string; args: unknown }[] = []
 vi.mock('@tauri-apps/plugin-opener', () => ({ openUrl: vi.fn() }))
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn(async (cmd: string, args: unknown) => {
   calls.push({ cmd, args })
-  if (cmd === 'connections_get') return { llm_provider: 'openai_compatible', llm_endpoint: 'http://localhost:11434/v1', llm_model: '', slskd_endpoint: 'http://localhost:5030', external_slskd: false, slskd_downloads_dir: '', enabled: false }
+  if (cmd === 'connections_get') return { llm_provider: 'openai_compatible', llm_endpoint: 'http://localhost:11434/v1', llm_model: '', slskd_endpoint: 'http://localhost:5030', external_slskd: false, slskd_downloads_dir: '', enabled: false, central_endpoint: '', google_client_id: '' }
   if (cmd === 'discovery_seeds') return []
   if (cmd === 'soulseek_status') return { external: false, state: { state: 'not_installed' }, installed: false, busy: false, downloaded_bytes: 0, download_size: 58309223, version: '0.26.0', licence: 'AGPL-3.0', source: 'https://github.com/slskd/slskd' }
   if (cmd === 'unattended_downloads_get') return false

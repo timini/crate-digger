@@ -204,10 +204,18 @@ pub fn handlers(state: &AppState) -> Vec<Arc<dyn Handler>> {
                         &Default::default(),
                     )?;
                     // With a fingerprint stored, the track can be identified.
-                    cd_core::metadata_lookup::queue(conn, track, false, cd_core::util::now_ms()).map(|_| ())
+                    cd_core::metadata_lookup::queue(conn, track, false, cd_core::util::now_ms())?;
+                    // New features change what would be shared.
+                    cd_core::sharing::queue_share(conn, track, cd_core::util::now_ms()).map(|_| ())
                 })),
             })
         },
+        Arc::new(cd_core::sharing::ShareHandler {
+            central: state.central.clone(),
+        }),
+        Arc::new(cd_core::sharing::ReuseHandler {
+            central: Some(state.central.clone()),
+        }),
         Arc::new(cd_core::metadata_lookup::MetadataHandler {
             lookup: Arc::new(cd_connectors::metadata::MetadataService {
                 secrets: state.secrets.clone(),

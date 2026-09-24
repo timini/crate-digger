@@ -2,7 +2,7 @@
 //! repository runs the same checks against the same files.
 //! Run with UPDATE_CONTRACT=1 only for a deliberate format change.
 
-use cd_protocol::backup::{Playlist, Rating, Seed, Snapshot, Track, SNAPSHOT_VERSION};
+use cd_protocol::backup::{self, Playlist, Rating, Seed, Snapshot, Track, SNAPSHOT_VERSION};
 use cd_protocol::*;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
@@ -80,6 +80,12 @@ fn snapshot() -> Snapshot {
             metadata: metadata(),
             fingerprint_hash: Some("fp:3f9a0c12".into()),
             kept: true,
+            file: Some(backup::FileRef {
+                name: "01 House Is House.flac".into(),
+                size_bytes: 41_234_567,
+                content_hash: "b3:5d1c".into(),
+                duration_ms: Some(392_000),
+            }),
         }],
         ratings: vec![Rating {
             track: "t1".into(),
@@ -260,6 +266,9 @@ fn snapshots_are_validated() {
     let mut s = snapshot();
     s.ratings[0].track = "missing".into();
     assert_eq!(s.validate().unwrap_err().code, "unknown_track");
+    let mut s = snapshot();
+    s.tracks[0].file.as_mut().unwrap().name = "../../etc/passwd".into();
+    assert_eq!(s.validate().unwrap_err().code, "file_ref");
     let mut s = snapshot();
     s.ratings[0].kind = "skip".into();
     assert_eq!(s.validate().unwrap_err().code, "rating_kind");

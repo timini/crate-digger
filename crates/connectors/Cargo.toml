@@ -6,6 +6,7 @@ publish.workspace = true
 
 [dependencies]
 cd-core = { path = "../core" }
+cd-protocol = { path = "../protocol" }
 serde = { version = "1.0", features = ["derive"] }
 # preserve_order: schemas reach the model with properties in the order written,
 # which constrained decoding follows (tool before arguments, artist before title).

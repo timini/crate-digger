@@ -231,6 +231,19 @@ pub struct SyncAck {
     pub duplicate: bool,
 }
 
+/// Reading the shared catalogue.
+pub trait CentralLookup: Send + Sync {
+    fn lookup(
+        &self,
+        keys: &[cd_protocol::RecordingKey],
+    ) -> AdapterResult<Vec<Option<cd_protocol::CatalogueEntry>>>;
+    fn features(
+        &self,
+        recording_id: &str,
+        version: &cd_protocol::FeatureVersion,
+    ) -> AdapterResult<cd_protocol::FeaturesResponse>;
+}
+
 /// Central metadata service (milestone 4).
 pub trait CentralSync: Send + Sync {
     fn submit(

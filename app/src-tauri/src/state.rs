@@ -26,6 +26,7 @@ pub struct AppState {
     /// Non-secret connection settings, shared with the live discovery source.
     pub connections: Arc<RwLock<cd_connectors::config::Connections>>,
     pub soulseek: Arc<crate::soulseek::Soulseek>,
+    pub central: Arc<crate::central::CentralService>,
 }
 
 pub fn archive_dir_setting(conn: &Connection) -> Option<PathBuf> {
@@ -77,6 +78,10 @@ impl AppState {
             staging,
             db_path.clone(),
         ));
+        let central = Arc::new(crate::central::CentralService::new(
+            connections.clone(),
+            secrets.clone(),
+        ));
         let model = crate::models::chosen(&conn, data_dir);
         let analyzer = Arc::new(SwitchableAnalyzer::new(Arc::new(crate::workers::analyzer(model))));
         Ok(AppState {
@@ -93,6 +98,7 @@ impl AppState {
             secrets,
             connections,
             soulseek,
+            central,
         })
     }
 

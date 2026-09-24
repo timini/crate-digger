@@ -65,6 +65,9 @@ pub async fn credential_set(
     key: Credential,
     value: Option<String>,
 ) -> CmdResult<()> {
+    if key == Credential::GoogleRefresh {
+        return Err("Sign in with Google instead.".into());
+    }
     let secrets = state.secrets.clone();
     tauri::async_runtime::spawn_blocking(move || secrets.set(key, value.as_deref()).map_err(err))
         .await

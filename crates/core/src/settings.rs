@@ -21,6 +21,8 @@ pub mod keys {
     pub const CLOSE_TO_TRAY: &str = "close_to_tray";
     /// Start downloads that meet the calibrated rule without asking. Off by default.
     pub const UNATTENDED_DOWNLOADS: &str = "unattended_downloads";
+    /// Contribute metadata and embeddings to the shared catalogue. Off by default.
+    pub const SHARING: &str = "sharing";
 }
 
 /// Resource limits the user controls. Defaults are the product spec's.
