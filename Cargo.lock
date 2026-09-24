@@ -594,6 +594,7 @@ dependencies = [
  "blake3",
  "cd-audio",
  "cd-core",
+ "cd-protocol",
  "ebur128",
  "libc",
  "realfft",
@@ -658,6 +659,14 @@ dependencies = [
  "uuid",
  "walkdir",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "cd-protocol"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

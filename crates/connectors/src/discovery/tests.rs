@@ -481,3 +481,36 @@ fn live_source_needs_a_connection_for_seeds_but_not_for_pasted_text() {
     };
     assert!(matches!(source.discover(&empty), Err(AdapterError::Invalid(_))));
 }
+
+#[test]
+fn an_artists_own_label_is_described_plainly() {
+    let web = Arc::new(
+        FakeWeb::default()
+            .route(
+                &search("label", "Seed Artist"),
+                200,
+                json!({"results": [{"id": 11, "title": "Seed Artist", "type": "label"}]}).to_string(),
+            )
+            .route(
+                &discogs_url("/labels/11/releases", &[("per_page", "30")]),
+                200,
+                json!({"releases": [{"id": 200, "artist": "Other Artist", "year": 2019}]}).to_string(),
+            )
+            .route(
+                &discogs_url("/releases/200", &[]),
+                200,
+                release_json(
+                    200,
+                    "Other EP",
+                    "Other Artist",
+                    "Seed Artist",
+                    &["Warehouse Tool"],
+                ),
+            ),
+    );
+    let d = discogs::Discogs::new("tok".into(), web, DISCOGS_BUDGET);
+    let mut out = Collector::default();
+    let mut seen = std::collections::HashSet::new();
+    expand_label(&d, "Seed Artist", Some("Seed Artist"), 10, &mut seen, &mut out).unwrap();
+    assert_eq!(out.proposals[0].reasons[0], "On Seed Artist's own label");
+}

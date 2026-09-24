@@ -218,6 +218,7 @@ fn expand_label(
     };
     let name = clean_artist(&hit.title);
     let reason = |_: &Release| match via_artist {
+        Some(artist) if fold(artist) == fold(&name) => format!("On {name}'s own label"),
         Some(artist) => format!("On {name}, which also releases {artist}"),
         None => format!("On {name}, a label in your seeds"),
     };

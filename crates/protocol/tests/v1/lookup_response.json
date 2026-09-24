@@ -1,0 +1,36 @@
+{
+  "results": [
+    {
+      "alternatives": [
+        {
+          "artist": "Kerri Chandler",
+          "duration_ms": 392000,
+          "label": "Kerri Chandler",
+          "mix": "Original Mix",
+          "release": "Downtown EP Pt. 2",
+          "title": "House Is House",
+          "year": 2025
+        }
+      ],
+      "feature_versions": [
+        {
+          "model_id": "discogs-effnet-bsdynamic-1",
+          "preprocessing_version": "essentia-musicnn-input-16k-v1",
+          "weights_checksum": "sha256:a280825b334797cf677939db8cd5762c0392aedd0ca6415dbc1cd083f045e43c"
+        }
+      ],
+      "metadata": {
+        "artist": "Kerri Chandler",
+        "duration_ms": 392000,
+        "label": "Kerri Chandler",
+        "mix": null,
+        "release": "Downtown EP Pt. 2",
+        "title": "House Is House",
+        "year": 2025
+      },
+      "recording_id": "r-01",
+      "references": []
+    },
+    null
+  ]
+}

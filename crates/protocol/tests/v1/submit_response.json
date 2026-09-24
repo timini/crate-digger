@@ -1,0 +1,17 @@
+{
+  "acks": [
+    {
+      "idempotency_key": "c-1",
+      "status": "accepted"
+    },
+    {
+      "idempotency_key": "c-2",
+      "status": "duplicate"
+    },
+    {
+      "idempotency_key": "c-3",
+      "reason": "wrong_dimensions",
+      "status": "rejected"
+    }
+  ]
+}
