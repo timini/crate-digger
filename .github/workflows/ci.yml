@@ -82,7 +82,9 @@ jobs:
       - run: cargo test --workspace --offline --no-run
       - name: Test without network (Linux, enforced)
         if: runner.os == 'Linux'
-        run: sudo -E unshare --net -- sudo -u "$USER" -E env "PATH=$PATH" cargo test --workspace --offline
+        # A new network namespace has only loopback, and it starts down; the
+        # sign-in test needs 127.0.0.1.
+        run: sudo -E unshare --net -- sh -c 'ip link set lo up && sudo -u "$USER" -E env "PATH=$PATH" cargo test --workspace --offline'
       - name: Test offline (macOS, Windows)
         if: runner.os != 'Linux'
         run: cargo test --workspace --offline
